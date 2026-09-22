@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -40,6 +42,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M1-debug
+          name: PunchTheClown-M2-alpha-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
