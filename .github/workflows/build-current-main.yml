@@ -1,0 +1,47 @@
+name: Build Current Main APK
+
+on:
+  workflow_run:
+    workflows: ["Build Punch the Clown APK"]
+    types: [completed]
+
+jobs:
+  build-current-main:
+    runs-on: ubuntu-latest
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+
+      - name: Install Android SDK packages
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build M2 Alpha debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload M2 Alpha APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PunchTheClown-M2-alpha-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
