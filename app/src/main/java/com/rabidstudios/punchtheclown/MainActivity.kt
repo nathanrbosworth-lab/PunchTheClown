@@ -2,15 +2,14 @@ package com.rabidstudios.punchtheclown
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.graphics.Canvas
+import android.content.Context
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -31,6 +30,8 @@ class MainActivity : Activity() {
     private var level = 1
     private var longestSequence = 0
     private var correctInputs = 0
+    private var completedSequences = 0
+    private var currentClown = 0
 
     private var inGame = false
     private var gameFinished = false
@@ -41,6 +42,8 @@ class MainActivity : Activity() {
     private lateinit var levelText: TextView
     private lateinit var sequenceText: TextView
     private lateinit var statusText: TextView
+    private lateinit var audio: GameAudioManager
+    private lateinit var prefs: android.content.SharedPreferences
 
     private val cream = Color.rgb(247, 231, 198)
     private val gold = Color.rgb(232, 182, 75)
@@ -52,7 +55,14 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = dark
         window.navigationBarColor = dark
+        prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
+        audio = GameAudioManager(this)
         showSplash()
+    }
+
+    override fun onDestroy() {
+        audio.release()
+        super.onDestroy()
     }
 
     override fun onPause() {
@@ -71,15 +81,13 @@ class MainActivity : Activity() {
             pausedByLifecycle = false
             handler.post {
                 AlertDialog.Builder(this)
-                    .setTitle("Hold your punches")
+                    .setTitle("HOLD YOUR PUNCHES")
                     .setMessage("The game was paused. Resume by replaying the current sequence?")
                     .setPositiveButton("Resume") { _, _ ->
                         sessionToken++
                         playSequence()
                     }
-                    .setNegativeButton("Quit") { _, _ ->
-                        quitToMenu()
-                    }
+                    .setNegativeButton("Quit") { _, _ -> quitToMenu() }
                     .setCancelable(false)
                     .show()
             }
@@ -104,7 +112,7 @@ class MainActivity : Activity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(20), dp(22), dp(20), dp(22))
+            setPadding(dp(20), dp(20), dp(20), dp(20))
             setBackgroundColor(wood)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -143,32 +151,26 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(58)
-            ).apply {
-                topMargin = dp(10)
-            }
+            ).apply { topMargin = dp(10) }
         }
     }
 
-    private fun space(height: Int): Space {
-        return Space(this).apply {
-            layoutParams = LinearLayout.LayoutParams(1, dp(height))
-        }
+    private fun space(height: Int): Space = Space(this).apply {
+        layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
 
     private fun showSplash() {
         inGame = false
         gameFinished = false
-        val r = root()
-        r.gravity = Gravity.CENTER
-        r.addView(title("🤡", 78f))
-        r.addView(space(10))
-        r.addView(title("PUNCH THE CLOWN", 36f))
+        val r = root().apply { gravity = Gravity.CENTER }
+        val mascot = PunchMascotView(this)
+        r.addView(mascot, LinearLayout.LayoutParams(dp(250), dp(250)))
         r.addView(space(8))
-        r.addView(subtitle("A ridiculously serious memory game"))
-        r.addView(space(24))
-        r.addView(title("HONK!", 22f))
+        r.addView(title("PUNCH THE CLOWN", 36f))
+        r.addView(space(6))
+        r.addView(subtitle("STEP RIGHT UP"))
         setContentView(r)
-        handler.postDelayed({ showMenu() }, 1100L)
+        handler.postDelayed({ showMenu() }, 1500L)
     }
 
     private fun showMenu() {
@@ -181,9 +183,15 @@ class MainActivity : Activity() {
         r.addView(title("PUNCH THE CLOWN"))
         r.addView(space(8))
         r.addView(subtitle("STEP RIGHT UP"))
-        r.addView(space(22))
-        r.addView(title("🤡", 74f))
-        r.addView(space(24))
+        r.addView(space(14))
+
+        val mascot = PunchMascotView(this)
+        r.addView(mascot, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(210)))
+
+        val high = prefs.getLong("high_score", 0L)
+        val longest = prefs.getInt("longest_sequence", 0)
+        r.addView(subtitle("PERSONAL BEST  %,d    •    LONGEST  %d".format(high, longest), 15f))
+        r.addView(space(12))
         r.addView(button("Punch the Clown") { showReady() })
 
         val comingSoon = button("Punching the Clowns — Coming Soon") {}
@@ -191,22 +199,39 @@ class MainActivity : Activity() {
         comingSoon.alpha = 0.5f
         r.addView(comingSoon)
 
-        r.addView(space(26))
-        r.addView(subtitle("Watch the pattern. Remember the pattern. Punch it back.", 15f))
+        r.addView(space(18))
+        r.addView(subtitle("Watch the squeaks. Remember the pattern. Punch it back.", 14f))
         setContentView(r)
+    }
+
+    private fun chooseClown(): Int {
+        val last = prefs.getInt("last_clown", -1)
+        var next = Random.nextInt(0, 10)
+        if (last in 0..9) {
+            while (next == last) next = Random.nextInt(0, 10)
+        }
+        currentClown = next
+        prefs.edit().putInt("last_clown", next).apply()
+        return next
     }
 
     private fun showReady() {
         inGame = false
+        chooseClown()
         val r = root()
         r.addView(title("PUNCH THE CLOWN"))
-        r.addView(space(18))
-        r.addView(title("🤡", 70f))
-        r.addView(space(18))
-        r.addView(subtitle("WATCH THE PATTERN.", 18f))
-        r.addView(subtitle("REMEMBER THE PATTERN.", 18f))
-        r.addView(subtitle("PUNCH IT BACK.", 18f))
-        r.addView(space(24))
+        r.addView(space(8))
+
+        val preview = ClownBoardView(this, currentClown, showGrid = false).apply {
+            inputEnabled = false
+        }
+        r.addView(preview, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        r.addView(space(8))
+        r.addView(subtitle("WATCH THE SQUEAKS.", 17f))
+        r.addView(subtitle("REMEMBER THE PATTERN.", 17f))
+        r.addView(subtitle("PUNCH IT BACK.", 17f))
+        r.addView(space(8))
         r.addView(button("PUNCH IT!") { startNewGame() })
         r.addView(button("Back to Menu") { showMenu() })
         setContentView(r)
@@ -221,6 +246,7 @@ class MainActivity : Activity() {
         level = 1
         longestSequence = 0
         correctInputs = 0
+        completedSequences = 0
         inGame = true
         gameFinished = false
         showGame()
@@ -229,12 +255,11 @@ class MainActivity : Activity() {
 
     private fun showGame() {
         val r = root()
-
         val hud = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setBackgroundColor(dark)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
         scoreText = hudItem("SCORE", "0")
@@ -243,26 +268,18 @@ class MainActivity : Activity() {
         hud.addView(scoreText)
         hud.addView(levelText)
         hud.addView(sequenceText)
-        r.addView(hud, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ))
+        r.addView(hud, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         statusText = title("WATCH", 24f)
-        r.addView(space(14))
-        r.addView(statusText)
         r.addView(space(10))
+        r.addView(statusText)
+        r.addView(space(6))
 
-        board = ClownBoardView(this).apply {
+        board = ClownBoardView(this, currentClown, showGrid = true).apply {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
-
-        r.addView(board, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            0,
-            1f
-        ))
+        r.addView(board, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         r.addView(button("Quit to Menu") {
             AlertDialog.Builder(this)
@@ -277,15 +294,13 @@ class MainActivity : Activity() {
         updateHud()
     }
 
-    private fun hudItem(label: String, value: String): TextView {
-        return TextView(this).apply {
-            text = "$label\n$value"
-            textSize = 16f
-            setTextColor(cream)
-            gravity = Gravity.CENTER
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
+    private fun hudItem(label: String, value: String): TextView = TextView(this).apply {
+        text = "$label\n$value"
+        textSize = 15f
+        setTextColor(cream)
+        gravity = Gravity.CENTER
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
     }
 
     private fun updateHud() {
@@ -319,6 +334,7 @@ class MainActivity : Activity() {
             handler.postDelayed({
                 if (token != sessionToken || !inGame || gameFinished) return@postDelayed
                 board.setHighlighted(cell)
+                audio.playGrid(cell)
             }, at)
             at += signal
 
@@ -350,14 +366,18 @@ class MainActivity : Activity() {
             gameFinished = true
             sessionToken++
             handler.removeCallbacksAndMessages(null)
+            haptic(110L, 210)
+            audio.playWrong()
 
             handler.postDelayed({
                 longestSequence = max(longestSequence, sequence.size - 1)
-                showResults()
-            }, 700L)
+                finishGameAndShowResults()
+            }, 950L)
             return
         }
 
+        audio.playGrid(cell)
+        haptic(28L, 85)
         score += 100L
         correctInputs++
         playerIndex++
@@ -366,43 +386,79 @@ class MainActivity : Activity() {
         if (playerIndex >= sequence.size) {
             board.inputEnabled = false
             longestSequence = max(longestSequence, sequence.size)
+            completedSequences++
             score += level * 100L
             updateHud()
             statusText.text = "NICE!"
+            haptic(42L, 105)
 
             val token = sessionToken
             handler.postDelayed({
-                if (token == sessionToken && inGame && !gameFinished) {
-                    addRound()
-                }
+                if (token == sessionToken && inGame && !gameFinished) addRound()
             }, 600L)
         }
     }
 
-    private fun showResults() {
+    private fun finishGameAndShowResults() {
+        val oldHigh = prefs.getLong("high_score", 0L)
+        val oldHighestLevel = prefs.getInt("highest_level", 0)
+        val oldLongest = prefs.getInt("longest_sequence", 0)
+        val newHigh = score > oldHigh
+
+        prefs.edit()
+            .putLong("high_score", max(oldHigh, score))
+            .putInt("highest_level", max(oldHighestLevel, level))
+            .putInt("longest_sequence", max(oldLongest, longestSequence))
+            .putLong("games_played", prefs.getLong("games_played", 0L) + 1L)
+            .putLong("correct_punches", prefs.getLong("correct_punches", 0L) + correctInputs)
+            .putLong("sequences_completed", prefs.getLong("sequences_completed", 0L) + completedSequences)
+            .apply()
+
+        if (newHigh) {
+            audio.playWin()
+            haptic(180L, 165)
+        }
+        showResults(newHigh)
+    }
+
+    private fun showResults(newHigh: Boolean) {
         inGame = false
+        val best = prefs.getLong("high_score", 0L)
         val r = root()
-        r.addView(title("YOU PUNCHED\nTHE WRONG CLOWN", 31f))
-        r.addView(space(22))
+        if (newHigh) {
+            r.addView(title("NEW HIGH SCORE!", 31f))
+            r.addView(subtitle("SILLY TRUMPET APPROVED", 14f))
+        } else {
+            r.addView(title("YOU PUNCHED\nTHE WRONG CLOWN", 30f))
+        }
+        r.addView(space(14))
         r.addView(resultLine("SCORE", "%,d".format(score)))
+        r.addView(resultLine("BEST", "%,d".format(best)))
         r.addView(resultLine("LEVEL", level.toString()))
         r.addView(resultLine("LONGEST SEQUENCE", longestSequence.toString()))
         r.addView(resultLine("CORRECT PUNCHES", correctInputs.toString()))
-        r.addView(space(22))
-        r.addView(button("PUNCH AGAIN") { startNewGame() })
+        r.addView(space(14))
+        r.addView(button("PUNCH AGAIN") {
+            chooseClown()
+            startNewGame()
+        })
         r.addView(button("MAIN MENU") { showMenu() })
         setContentView(r)
     }
 
-    private fun resultLine(label: String, value: String): TextView {
-        return TextView(this).apply {
-            text = "$label\n$value"
-            textSize = 22f
-            setTextColor(if (label == "SCORE") gold else cream)
-            gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, dp(8))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-        }
+    private fun resultLine(label: String, value: String): TextView = TextView(this).apply {
+        text = "$label\n$value"
+        textSize = 21f
+        setTextColor(if (label == "SCORE" || label == "BEST") gold else cream)
+        gravity = Gravity.CENTER
+        setPadding(0, dp(6), 0, dp(6))
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+
+    private fun haptic(durationMs: Long, amplitude: Int) {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+        if (!vibrator.hasVibrator()) return
+        vibrator.vibrate(VibrationEffect.createOneShot(durationMs, amplitude.coerceIn(1, 255)))
     }
 
     private fun quitToMenu() {
@@ -413,189 +469,5 @@ class MainActivity : Activity() {
         showMenu()
     }
 
-    private fun dp(value: Int): Int {
-        return (value * resources.displayMetrics.density).toInt()
-    }
-}
-
-class ClownBoardView(
-    context: android.content.Context
-) : View(context) {
-
-    var onCellPressed: ((Int) -> Unit)? = null
-    var inputEnabled: Boolean = false
-
-    private var highlightedCell: Int? = null
-    private var wrongCell: Int? = null
-    private val clearHandler = Handler(Looper.getMainLooper())
-
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-    }
-
-    fun setHighlighted(cell: Int?) {
-        highlightedCell = cell
-        wrongCell = null
-        invalidate()
-    }
-
-    fun clearMarks() {
-        highlightedCell = null
-        wrongCell = null
-        invalidate()
-    }
-
-    fun markWrong(cell: Int) {
-        wrongCell = cell
-        highlightedCell = null
-        invalidate()
-    }
-
-    fun flashPlayer(cell: Int) {
-        highlightedCell = cell
-        invalidate()
-        clearHandler.removeCallbacksAndMessages(null)
-        clearHandler.postDelayed({
-            if (wrongCell == null) {
-                highlightedCell = null
-                invalidate()
-            }
-        }, 120L)
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (!inputEnabled) return true
-
-        if (event.action == MotionEvent.ACTION_UP) {
-            val col = ((event.x / width) * 3f).toInt().coerceIn(0, 2)
-            val row = ((event.y / height) * 3f).toInt().coerceIn(0, 2)
-            onCellPressed?.invoke(row * 3 + col)
-            performClick()
-        }
-        return true
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-
-        val w = width.toFloat()
-        val h = height.toFloat()
-
-        paint.color = Color.rgb(37, 20, 15)
-        canvas.drawRect(0f, 0f, w, h, paint)
-
-        val stripeW = w / 12f
-        repeat(12) { i ->
-            paint.color = if (i % 2 == 0) Color.rgb(127, 23, 29) else Color.rgb(241, 215, 166)
-            canvas.drawRect(i * stripeW, 0f, (i + 1) * stripeW + 1f, h, paint)
-        }
-
-        paint.color = Color.argb(125, 14, 9, 7)
-        canvas.drawRect(0f, 0f, w, h, paint)
-
-        val cx = w / 2f
-        val cy = h * 0.47f
-        val faceR = w * 0.31f
-
-        paint.color = Color.rgb(183, 38, 46)
-        canvas.drawCircle(cx - faceR * .82f, cy - faceR * .40f, faceR * .58f, paint)
-        canvas.drawCircle(cx + faceR * .82f, cy - faceR * .40f, faceR * .58f, paint)
-        canvas.drawCircle(cx - faceR * .92f, cy + faceR * .12f, faceR * .52f, paint)
-        canvas.drawCircle(cx + faceR * .92f, cy + faceR * .12f, faceR * .52f, paint)
-
-        paint.color = Color.rgb(255, 244, 232)
-        canvas.drawCircle(cx, cy, faceR, paint)
-
-        stroke.color = Color.rgb(62, 36, 24)
-        stroke.strokeWidth = w * .014f
-        canvas.drawCircle(cx, cy, faceR, stroke)
-
-        paint.color = Color.WHITE
-        canvas.drawOval(
-            cx - faceR * .62f,
-            cy - faceR * .43f,
-            cx - faceR * .10f,
-            cy - faceR * .05f,
-            paint
-        )
-        canvas.drawOval(
-            cx + faceR * .10f,
-            cy - faceR * .43f,
-            cx + faceR * .62f,
-            cy - faceR * .05f,
-            paint
-        )
-
-        paint.color = Color.rgb(38, 93, 133)
-        canvas.drawCircle(cx - faceR * .34f, cy - faceR * .22f, faceR * .10f, paint)
-        canvas.drawCircle(cx + faceR * .34f, cy - faceR * .22f, faceR * .10f, paint)
-
-        paint.color = Color.BLACK
-        canvas.drawCircle(cx - faceR * .34f, cy - faceR * .22f, faceR * .05f, paint)
-        canvas.drawCircle(cx + faceR * .34f, cy - faceR * .22f, faceR * .05f, paint)
-
-        paint.color = Color.rgb(214, 37, 47)
-        canvas.drawCircle(cx, cy + faceR * .06f, faceR * .23f, paint)
-
-        stroke.color = Color.rgb(179, 30, 40)
-        stroke.strokeWidth = w * .025f
-        val smile = Path().apply {
-            moveTo(cx - faceR * .52f, cy + faceR * .34f)
-            quadTo(cx, cy + faceR * .82f, cx + faceR * .52f, cy + faceR * .34f)
-        }
-        canvas.drawPath(smile, stroke)
-
-        paint.color = Color.rgb(232, 182, 75)
-        val bowY = cy + faceR * 1.20f
-        val bow = Path().apply {
-            moveTo(cx, bowY)
-            lineTo(cx - w * .23f, bowY - h * .055f)
-            lineTo(cx - w * .23f, bowY + h * .055f)
-            close()
-        }
-        canvas.drawPath(bow, paint)
-        val bow2 = Path().apply {
-            moveTo(cx, bowY)
-            lineTo(cx + w * .23f, bowY - h * .055f)
-            lineTo(cx + w * .23f, bowY + h * .055f)
-            close()
-        }
-        canvas.drawPath(bow2, paint)
-        paint.color = Color.rgb(183, 38, 46)
-        canvas.drawCircle(cx, bowY, w * .045f, paint)
-
-        val cellW = w / 3f
-        val cellH = h / 3f
-
-        for (cell in 0..8) {
-            val row = cell / 3
-            val col = cell % 3
-            val left = col * cellW
-            val top = row * cellH
-            val right = left + cellW
-            val bottom = top + cellH
-
-            if (cell == highlightedCell) {
-                paint.color = Color.argb(125, 255, 213, 64)
-                canvas.drawRect(left + 3f, top + 3f, right - 3f, bottom - 3f, paint)
-            } else if (cell == wrongCell) {
-                paint.color = Color.argb(165, 216, 67, 67)
-                canvas.drawRect(left + 3f, top + 3f, right - 3f, bottom - 3f, paint)
-            }
-
-            stroke.color = Color.argb(35, 255, 255, 255)
-            stroke.strokeWidth = 1f
-            canvas.drawRect(left, top, right, bottom, stroke)
-        }
-
-        stroke.color = Color.rgb(232, 182, 75)
-        stroke.strokeWidth = 8f
-        canvas.drawRect(4f, 4f, w - 4f, h - 4f, stroke)
-    }
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
