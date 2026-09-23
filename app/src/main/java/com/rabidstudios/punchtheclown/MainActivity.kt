@@ -193,6 +193,10 @@ class MainActivity : Activity() {
         gameFinished = false
 
         val r = root()
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, resources.displayMetrics.heightPixels / 4)
+        )
         r.addView(title("PUNCH THE CLOWN"))
         r.addView(space(5))
         r.addView(subtitle("STEP RIGHT UP"))
@@ -238,6 +242,10 @@ class MainActivity : Activity() {
         val r = root()
         r.addView(title("PUNCH THE CLOWN"))
         r.addView(space(8))
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, resources.displayMetrics.heightPixels / 8)
+        )
 
         val preview = ClownBoardView(this, currentClown, showGrid = false).apply {
             inputEnabled = false
@@ -332,14 +340,18 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(1, 0, 1f)
         )
 
-        r.addView(button("Quit to Menu") {
+        val quitButton = button("Quit to Menu") {
             AlertDialog.Builder(this)
                 .setTitle("Quit game?")
                 .setMessage("Your current score will be lost.")
                 .setPositiveButton("Quit") { _, _ -> quitToMenu() }
                 .setNegativeButton("Keep punching", null)
                 .show()
-        })
+        }.apply {
+            // Raise by exactly one button height: the new bottom lands at the old top.
+            translationY = -dp(58).toFloat()
+        }
+        r.addView(quitButton)
 
         setContentView(r)
         updateHud()
