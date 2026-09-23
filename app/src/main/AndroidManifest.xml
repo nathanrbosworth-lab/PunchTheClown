@@ -4,8 +4,8 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/punch_icon"
-        android:roundIcon="@drawable/punch_icon"
+        android:icon="@drawable/punch_clown_icon"
+        android:roundIcon="@drawable/punch_clown_icon"
         android:label="Punch the Clown"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
