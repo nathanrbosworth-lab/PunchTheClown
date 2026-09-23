@@ -51,6 +51,10 @@ class MainActivity : Activity() {
     private val wood = Color.rgb(54, 31, 22)
     private val dark = Color.rgb(27, 18, 16)
 
+    // Clown artwork is authored at 900 x 900 pixels. Keep both the ready preview
+    // and active play field at the same physical-pixel size.
+    private val gameBoardSizePx = 900
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = dark
@@ -238,7 +242,15 @@ class MainActivity : Activity() {
         val preview = ClownBoardView(this, currentClown, showGrid = false).apply {
             inputEnabled = false
         }
-        r.addView(preview, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        r.addView(
+            preview,
+            LinearLayout.LayoutParams(
+                gameBoardSizePx,
+                gameBoardSizePx
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        )
 
         r.addView(space(8))
         r.addView(subtitle("WATCH THE SQUEAKS.", 17f))
@@ -298,9 +310,13 @@ class MainActivity : Activity() {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
-        // The gameplay board is deliberately fixed at 900 x 900 physical pixels.
-        // With a 3 x 3 hit grid, every cell is exactly 300 x 300 pixels.
-        val gameBoardSizePx = 900
+        // Use equal weighted space above and below the fixed board so the
+        // 900 x 900 play field is vertically centered in the available play area.
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, 0, 1f)
+        )
+
         r.addView(
             board,
             LinearLayout.LayoutParams(
@@ -309,6 +325,11 @@ class MainActivity : Activity() {
             ).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
+        )
+
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, 0, 1f)
         )
 
         r.addView(button("Quit to Menu") {
