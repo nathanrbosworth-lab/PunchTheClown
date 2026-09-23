@@ -298,13 +298,17 @@ class MainActivity : Activity() {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
+        // The gameplay board is deliberately fixed at 900 x 900 physical pixels.
+        // With a 3 x 3 hit grid, every cell is exactly 300 x 300 pixels.
+        val gameBoardSizePx = 900
         r.addView(
             board,
             LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
+                gameBoardSizePx,
+                gameBoardSizePx
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
         )
 
         r.addView(button("Quit to Menu") {
