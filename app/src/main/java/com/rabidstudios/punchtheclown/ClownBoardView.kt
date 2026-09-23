@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
+import kotlin.math.min
 
 class ClownBoardView(
     context: Context,
@@ -99,7 +100,7 @@ class ClownBoardView(
         paint.color = Color.rgb(31, 18, 15)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
-        val dst = centerCropDestination(clownBitmap.width, clownBitmap.height)
+        val dst = fitCenterDestination(clownBitmap.width, clownBitmap.height)
         canvas.drawBitmap(clownBitmap, null, dst, paint)
 
         if (showGrid) {
@@ -136,20 +137,23 @@ class ClownBoardView(
         canvas.drawRect(3f, 3f, width - 3f, height - 3f, stroke)
     }
 
-    private fun centerCropDestination(sourceWidth: Int, sourceHeight: Int): RectF {
+    private fun fitCenterDestination(sourceWidth: Int, sourceHeight: Int): RectF {
         val viewW = width.toFloat()
         val viewH = height.toFloat()
-        val sourceRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
-        val viewRatio = viewW / viewH
+        val scale = min(
+            viewW / sourceWidth.toFloat(),
+            viewH / sourceHeight.toFloat()
+        )
+        val drawW = sourceWidth * scale
+        val drawH = sourceHeight * scale
+        val left = (viewW - drawW) / 2f
+        val top = (viewH - drawH) / 2f
 
-        return if (sourceRatio > viewRatio) {
-            val scaledW = viewH * sourceRatio
-            val left = (viewW - scaledW) / 2f
-            RectF(left, 0f, left + scaledW, viewH)
-        } else {
-            val scaledH = viewW / sourceRatio
-            val top = (viewH - scaledH) / 2f
-            RectF(0f, top, viewW, top + scaledH)
-        }
+        return RectF(
+            left,
+            top,
+            left + drawW,
+            top + drawH
+        )
     }
 }
