@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
@@ -28,8 +27,24 @@ class ClownBoardView(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
-    private val sprite: Bitmap by lazy {
-        BitmapFactory.decodeResource(resources, R.drawable.clowns_01_10)
+    private val clownResources = intArrayOf(
+        R.drawable.clown_illustrated_01,
+        R.drawable.clown_illustrated_02,
+        R.drawable.clown_illustrated_03,
+        R.drawable.clown_illustrated_04,
+        R.drawable.clown_illustrated_05,
+        R.drawable.clown_illustrated_06,
+        R.drawable.clown_illustrated_07,
+        R.drawable.clown_illustrated_08,
+        R.drawable.clown_illustrated_09,
+        R.drawable.clown_illustrated_10
+    )
+
+    private val clownBitmap: Bitmap by lazy {
+        BitmapFactory.decodeResource(
+            resources,
+            clownResources[clownIndex.coerceIn(0, clownResources.lastIndex)]
+        )
     }
 
     fun setHighlighted(cell: Int?) {
@@ -84,21 +99,8 @@ class ClownBoardView(
         paint.color = Color.rgb(31, 18, 15)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
-        val index = clownIndex.coerceIn(0, 9)
-        val cellW = sprite.width / 5
-        val cellH = sprite.height / 2
-        val sourceCol = index % 5
-        val sourceRow = index / 5
-
-        val src = Rect(
-            sourceCol * cellW,
-            sourceRow * cellH,
-            (sourceCol + 1) * cellW,
-            (sourceRow + 1) * cellH
-        )
-
-        val dst = centerCropDestination(src.width(), src.height())
-        canvas.drawBitmap(sprite, src, dst, paint)
+        val dst = centerCropDestination(clownBitmap.width, clownBitmap.height)
+        canvas.drawBitmap(clownBitmap, null, dst, paint)
 
         if (showGrid) {
             val gridW = width / 3f
@@ -137,7 +139,7 @@ class ClownBoardView(
     private fun centerCropDestination(sourceWidth: Int, sourceHeight: Int): RectF {
         val viewW = width.toFloat()
         val viewH = height.toFloat()
-        val sourceRatio = sourceWidth.toFloat() / sourceHeight
+        val sourceRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
         val viewRatio = viewW / viewH
 
         return if (sourceRatio > viewRatio) {
