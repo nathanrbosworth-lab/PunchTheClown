@@ -10,9 +10,9 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
@@ -23,7 +23,6 @@ class MainActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var sessionToken = 0
-
     private val sequence = mutableListOf<Int>()
     private var playerIndex = 0
     private var score = 0L
@@ -32,7 +31,6 @@ class MainActivity : Activity() {
     private var correctInputs = 0
     private var completedSequences = 0
     private var currentClown = 0
-
     private var inGame = false
     private var gameFinished = false
     private var pausedByLifecycle = false
@@ -155,6 +153,15 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun artImage(resId: Int, scale: ImageView.ScaleType): ImageView {
+        return ImageView(this).apply {
+            setImageResource(resId)
+            scaleType = scale
+            adjustViewBounds = true
+            setBackgroundColor(dark)
+        }
+    }
+
     private fun space(height: Int): Space = Space(this).apply {
         layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
@@ -162,15 +169,22 @@ class MainActivity : Activity() {
     private fun showSplash() {
         inGame = false
         gameFinished = false
-        val r = root().apply { gravity = Gravity.CENTER }
-        val mascot = PunchMascotView(this)
-        r.addView(mascot, LinearLayout.LayoutParams(dp(250), dp(250)))
-        r.addView(space(8))
-        r.addView(title("PUNCH THE CLOWN", 36f))
-        r.addView(space(6))
-        r.addView(subtitle("STEP RIGHT UP"))
+        val r = root().apply {
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 0)
+            setBackgroundColor(Color.BLACK)
+        }
+        val splash = artImage(R.drawable.punch_clown_splash, ImageView.ScaleType.CENTER_CROP)
+        r.addView(
+            splash,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
         setContentView(r)
-        handler.postDelayed({ showMenu() }, 1500L)
+        handler.postDelayed({ showMenu() }, 1800L)
     }
 
     private fun showMenu() {
@@ -181,17 +195,27 @@ class MainActivity : Activity() {
 
         val r = root()
         r.addView(title("PUNCH THE CLOWN"))
-        r.addView(space(8))
+        r.addView(space(4))
         r.addView(subtitle("STEP RIGHT UP"))
-        r.addView(space(14))
+        r.addView(space(8))
 
-        val mascot = PunchMascotView(this)
-        r.addView(mascot, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(210)))
+        val hero = artImage(R.drawable.punch_clown_hero, ImageView.ScaleType.CENTER_CROP)
+        r.addView(
+            hero,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ).apply {
+                topMargin = dp(4)
+                bottomMargin = dp(8)
+            }
+        )
 
         val high = prefs.getLong("high_score", 0L)
         val longest = prefs.getInt("longest_sequence", 0)
         r.addView(subtitle("PERSONAL BEST  %,d    •    LONGEST  %d".format(high, longest), 15f))
-        r.addView(space(12))
+        r.addView(space(6))
         r.addView(button("Punch the Clown") { showReady() })
 
         val comingSoon = button("Punching the Clowns — Coming Soon") {}
@@ -199,7 +223,7 @@ class MainActivity : Activity() {
         comingSoon.alpha = 0.5f
         r.addView(comingSoon)
 
-        r.addView(space(18))
+        r.addView(space(10))
         r.addView(subtitle("Watch the squeaks. Remember the pattern. Punch it back.", 14f))
         setContentView(r)
     }
@@ -320,7 +344,6 @@ class MainActivity : Activity() {
 
     private fun playSequence() {
         if (!inGame || gameFinished || sequence.isEmpty()) return
-
         val token = sessionToken
         board.inputEnabled = false
         board.clearMarks()
