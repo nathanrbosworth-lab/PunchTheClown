@@ -10,9 +10,9 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
@@ -159,18 +159,27 @@ class MainActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
 
+    private fun approvedArt(drawable: Int, scaleType: ImageView.ScaleType): ImageView {
+        return ImageView(this).apply {
+            setImageResource(drawable)
+            this.scaleType = scaleType
+            adjustViewBounds = true
+            contentDescription = "Punch the Clown artwork"
+        }
+    }
+
     private fun showSplash() {
         inGame = false
         gameFinished = false
-        val r = root().apply { gravity = Gravity.CENTER }
-        val mascot = PunchMascotView(this)
-        r.addView(mascot, LinearLayout.LayoutParams(dp(250), dp(250)))
-        r.addView(space(8))
-        r.addView(title("PUNCH THE CLOWN", 36f))
-        r.addView(space(6))
-        r.addView(subtitle("STEP RIGHT UP"))
-        setContentView(r)
-        handler.postDelayed({ showMenu() }, 1500L)
+
+        val image = approvedArt(
+            R.drawable.punch_clown_splash,
+            ImageView.ScaleType.CENTER_CROP
+        )
+        image.setBackgroundColor(dark)
+        setContentView(image)
+
+        handler.postDelayed({ showMenu() }, 1800L)
     }
 
     private fun showMenu() {
@@ -181,17 +190,20 @@ class MainActivity : Activity() {
 
         val r = root()
         r.addView(title("PUNCH THE CLOWN"))
-        r.addView(space(8))
+        r.addView(space(5))
         r.addView(subtitle("STEP RIGHT UP"))
-        r.addView(space(14))
+        r.addView(space(10))
 
-        val mascot = PunchMascotView(this)
-        r.addView(mascot, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(210)))
+        val icon = approvedArt(
+            R.drawable.punch_clown_icon,
+            ImageView.ScaleType.CENTER_INSIDE
+        )
+        r.addView(icon, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(190)))
 
         val high = prefs.getLong("high_score", 0L)
         val longest = prefs.getInt("longest_sequence", 0)
         r.addView(subtitle("PERSONAL BEST  %,d    •    LONGEST  %d".format(high, longest), 15f))
-        r.addView(space(12))
+        r.addView(space(8))
         r.addView(button("Punch the Clown") { showReady() })
 
         val comingSoon = button("Punching the Clowns — Coming Soon") {}
@@ -199,7 +211,7 @@ class MainActivity : Activity() {
         comingSoon.alpha = 0.5f
         r.addView(comingSoon)
 
-        r.addView(space(18))
+        r.addView(space(12))
         r.addView(subtitle("Watch the squeaks. Remember the pattern. Punch it back.", 14f))
         setContentView(r)
     }
@@ -218,6 +230,7 @@ class MainActivity : Activity() {
     private fun showReady() {
         inGame = false
         chooseClown()
+
         val r = root()
         r.addView(title("PUNCH THE CLOWN"))
         r.addView(space(8))
@@ -268,18 +281,31 @@ class MainActivity : Activity() {
         hud.addView(scoreText)
         hud.addView(levelText)
         hud.addView(sequenceText)
-        r.addView(hud, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        r.addView(
+            hud,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         statusText = title("WATCH", 24f)
-        r.addView(space(10))
+        r.addView(space(8))
         r.addView(statusText)
-        r.addView(space(6))
+        r.addView(space(5))
 
         board = ClownBoardView(this, currentClown, showGrid = true).apply {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
-        r.addView(board, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        r.addView(
+            board,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
 
         r.addView(button("Quit to Menu") {
             AlertDialog.Builder(this)
@@ -411,7 +437,10 @@ class MainActivity : Activity() {
             .putInt("longest_sequence", max(oldLongest, longestSequence))
             .putLong("games_played", prefs.getLong("games_played", 0L) + 1L)
             .putLong("correct_punches", prefs.getLong("correct_punches", 0L) + correctInputs)
-            .putLong("sequences_completed", prefs.getLong("sequences_completed", 0L) + completedSequences)
+            .putLong(
+                "sequences_completed",
+                prefs.getLong("sequences_completed", 0L) + completedSequences
+            )
             .apply()
 
         if (newHigh) {
@@ -425,12 +454,13 @@ class MainActivity : Activity() {
         inGame = false
         val best = prefs.getLong("high_score", 0L)
         val r = root()
+
         if (newHigh) {
             r.addView(title("NEW HIGH SCORE!", 31f))
-            r.addView(subtitle("SILLY TRUMPET APPROVED", 14f))
         } else {
             r.addView(title("YOU PUNCHED\nTHE WRONG CLOWN", 30f))
         }
+
         r.addView(space(14))
         r.addView(resultLine("SCORE", "%,d".format(score)))
         r.addView(resultLine("BEST", "%,d".format(best)))
@@ -458,7 +488,12 @@ class MainActivity : Activity() {
     private fun haptic(durationMs: Long, amplitude: Int) {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
         if (!vibrator.hasVibrator()) return
-        vibrator.vibrate(VibrationEffect.createOneShot(durationMs, amplitude.coerceIn(1, 255)))
+        vibrator.vibrate(
+            VibrationEffect.createOneShot(
+                durationMs,
+                amplitude.coerceIn(1, 255)
+            )
+        )
     }
 
     private fun quitToMenu() {
