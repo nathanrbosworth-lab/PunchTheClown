@@ -10,8 +10,10 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
@@ -192,36 +194,87 @@ class MainActivity : Activity() {
         inGame = false
         gameFinished = false
 
-        val r = root()
-        r.addView(
-            Space(this),
-            LinearLayout.LayoutParams(1, resources.displayMetrics.heightPixels / 4)
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(dark)
+        }
+
+        val background = ImageView(this).apply {
+            setImageResource(R.drawable.game_select_screen)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Punch the Clown carnival game selection"
+        }
+        root.addView(
+            background,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         )
-        r.addView(title("PUNCH THE CLOWN"))
-        r.addView(space(5))
-        r.addView(subtitle("STEP RIGHT UP"))
-        r.addView(space(10))
 
-        val icon = approvedArt(
-            R.drawable.punch_clown_icon,
-            ImageView.ScaleType.CENTER_INSIDE
-        )
-        r.addView(icon, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(190)))
+        // The artwork already contains the two guidepost signs. These transparent
+        // views turn the signs themselves into the game-mode buttons.
+        val punchTheClownSign = View(this).apply {
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Punch the Clown"
+            setOnClickListener { showReady() }
+        }
 
-        val high = prefs.getLong("high_score", 0L)
-        val longest = prefs.getInt("longest_sequence", 0)
-        r.addView(subtitle("PERSONAL BEST  %,d    •    LONGEST  %d".format(high, longest), 15f))
-        r.addView(space(8))
-        r.addView(button("Punch the Clown") { showReady() })
+        val punchingTheClownsSign = View(this).apply {
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Punching the Clowns — Coming Soon"
+            setOnClickListener {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Punching the Clowns")
+                    .setMessage("Coming soon.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
 
-        val comingSoon = button("Punching the Clowns — Coming Soon") {}
-        comingSoon.isEnabled = false
-        comingSoon.alpha = 0.5f
-        r.addView(comingSoon)
+        root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
+        root.addView(punchingTheClownsSign, FrameLayout.LayoutParams(1, 1))
+        setContentView(root)
 
-        r.addView(space(12))
-        r.addView(subtitle("Watch the squeaks. Remember the pattern. Punch it back.", 14f))
-        setContentView(r)
+        root.post {
+            val rootW = root.width.toFloat()
+            val rootH = root.height.toFloat()
+            val artRatio = 941f / 1672f
+            val rootRatio = rootW / rootH
+
+            val artW: Float
+            val artH: Float
+            val artLeft: Float
+            val artTop: Float
+
+            if (rootRatio > artRatio) {
+                artH = rootH
+                artW = artH * artRatio
+                artLeft = (rootW - artW) / 2f
+                artTop = 0f
+            } else {
+                artW = rootW
+                artH = artW / artRatio
+                artLeft = 0f
+                artTop = (rootH - artH) / 2f
+            }
+
+            fun placeSign(view: View, left: Float, top: Float, right: Float, bottom: Float) {
+                view.layoutParams = FrameLayout.LayoutParams(
+                    ((right - left) * artW).toInt(),
+                    ((bottom - top) * artH).toInt()
+                ).apply {
+                    leftMargin = (artLeft + left * artW).toInt()
+                    topMargin = (artTop + top * artH).toInt()
+                }
+            }
+
+            // Normalized bounds align the touch targets with the two painted
+            // guidepost signs on the right side of the supplied poster.
+            placeSign(punchTheClownSign, 0.52f, 0.47f, 0.98f, 0.63f)
+            placeSign(punchingTheClownsSign, 0.52f, 0.63f, 0.98f, 0.80f)
+        }
     }
 
     private fun chooseClown(): Int {
@@ -240,7 +293,12 @@ class MainActivity : Activity() {
         chooseClown()
 
         val r = root()
-        r.addView(title("PUNCH THE CLOWN"))
+        val readyTitle = title("PUNCH THE CLOWN")
+        r.addView(readyTitle)
+        readyTitle.post {
+            // Move only the title down by exactly one measured title height.
+            readyTitle.translationY = readyTitle.height.toFloat()
+        }
         r.addView(space(8))
         r.addView(
             Space(this),
@@ -313,6 +371,14 @@ class MainActivity : Activity() {
         r.addView(space(8))
         r.addView(statusText)
         r.addView(space(5))
+
+        hud.post {
+            // Move the score bar and WATCH / YOUR TURN marker down by exactly
+            // one measured score-bar height without moving the 900 x 900 board.
+            val shift = hud.height.toFloat()
+            hud.translationY = shift
+            statusText.translationY = shift
+        }
 
         board = ClownBoardView(this, currentClown, showGrid = true).apply {
             inputEnabled = false
