@@ -324,9 +324,9 @@ class MainActivity : Activity() {
             }
 
             // Bounds measured against the approved 941 x 1672 carnival menu.
-            placeSign(punchTheClownSign, 0.553f, 0.425f, 0.985f, 0.512f)
-            placeSign(beaningTheClownsSign, 0.548f, 0.541f, 0.989f, 0.657f)
-            placeSign(statsSettingsSign, 0.581f, 0.695f, 0.967f, 0.763f)
+            placeSign(punchTheClownSign, 0.488f, 0.431f, 0.968f, 0.579f)
+            placeSign(beaningTheClownsSign, 0.490f, 0.585f, 0.965f, 0.719f)
+            placeSign(statsSettingsSign, 0.495f, 0.720f, 0.951f, 0.842f)
         }
     }
 
