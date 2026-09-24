@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     private var inGame = false
     private var gameFinished = false
     private var pausedByLifecycle = false
+    private var scoreBarHeightPx = 0
 
     private lateinit var board: ClownBoardView
     private lateinit var scoreText: TextView
@@ -375,7 +376,8 @@ class MainActivity : Activity() {
         hud.post {
             // Move the score bar and WATCH / YOUR TURN marker down by exactly
             // one measured score-bar height without moving the 900 x 900 board.
-            val shift = hud.height.toFloat()
+            scoreBarHeightPx = hud.height
+            val shift = scoreBarHeightPx.toFloat()
             hud.translationY = shift
             statusText.translationY = shift
         }
@@ -557,6 +559,16 @@ class MainActivity : Activity() {
         inGame = false
         val best = prefs.getLong("high_score", 0L)
         val r = root()
+
+        // Match the results/fail screen's starting position to the visible
+        // top of the translated gameplay score bar.
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(
+                1,
+                if (scoreBarHeightPx > 0) scoreBarHeightPx else dp(56)
+            )
+        )
 
         if (newHigh) {
             r.addView(title("NEW HIGH SCORE!", 31f))
