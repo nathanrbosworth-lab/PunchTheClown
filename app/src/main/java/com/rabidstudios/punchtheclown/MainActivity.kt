@@ -205,6 +205,7 @@ class MainActivity : Activity() {
         val background = ImageView(this).apply {
             setImageResource(R.drawable.game_select_screen)
             scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
             contentDescription = "Punch the Clown carnival game selection"
         }
         root.addView(
@@ -215,8 +216,8 @@ class MainActivity : Activity() {
             )
         )
 
-        // The artwork already contains the two guidepost signs. These transparent
-        // views turn the signs themselves into the game-mode buttons.
+        // The supplied artwork contains all three guidepost signs. Transparent
+        // views make the painted signs themselves the only visible controls.
         val punchTheClownSign = View(this).apply {
             isClickable = true
             isFocusable = true
@@ -224,38 +225,29 @@ class MainActivity : Activity() {
             setOnClickListener { showReady() }
         }
 
-        val punchingTheClownsSign = View(this).apply {
+        val beaningTheClownsSign = View(this).apply {
             isClickable = true
             isFocusable = true
-            contentDescription = "Punching the Clowns — Coming Soon"
+            contentDescription = "Beaning the Clowns — Coming Soon"
             setOnClickListener {
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Punching the Clowns")
+                    .setTitle("Beaning the Clowns")
                     .setMessage("Coming soon.")
                     .setPositiveButton("OK", null)
                     .show()
             }
         }
 
-        root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
-        root.addView(punchingTheClownsSign, FrameLayout.LayoutParams(1, 1))
-
-        val statsSettingsButton = Button(this).apply {
-            text = "STATS / SETTINGS"
-            textSize = 15f
-            isAllCaps = false
-            setTextColor(Color.WHITE)
-            setBackgroundColor(red)
+        val statsSettingsSign = View(this).apply {
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Stats and Settings"
             setOnClickListener { showStatsSettings() }
         }
-        root.addView(
-            statsSettingsButton,
-            FrameLayout.LayoutParams(dp(230), dp(52)).apply {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                bottomMargin = dp(72)
-            }
-        )
 
+        root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
+        root.addView(beaningTheClownsSign, FrameLayout.LayoutParams(1, 1))
+        root.addView(statsSettingsSign, FrameLayout.LayoutParams(1, 1))
         setContentView(root)
 
         root.post {
@@ -291,10 +283,10 @@ class MainActivity : Activity() {
                 }
             }
 
-            // Normalized bounds align the touch targets with the two painted
-            // guidepost signs on the right side of the supplied poster.
-            placeSign(punchTheClownSign, 0.52f, 0.47f, 0.98f, 0.63f)
-            placeSign(punchingTheClownsSign, 0.52f, 0.63f, 0.98f, 0.80f)
+            // Bounds measured against the approved 941 x 1672 carnival menu.
+            placeSign(punchTheClownSign, 0.553f, 0.425f, 0.985f, 0.512f)
+            placeSign(beaningTheClownsSign, 0.548f, 0.541f, 0.989f, 0.657f)
+            placeSign(statsSettingsSign, 0.581f, 0.695f, 0.967f, 0.763f)
         }
     }
 
