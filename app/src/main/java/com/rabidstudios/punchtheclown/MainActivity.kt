@@ -122,10 +122,50 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(20), dp(20), dp(20))
-            setBackgroundColor(wood)
+            setBackgroundColor(Color.TRANSPARENT)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+    }
+
+    private fun withCarnivalBackground(content: View): FrameLayout {
+        return FrameLayout(this).apply {
+            setBackgroundColor(dark)
+
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.carnival_background)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription = null
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            // A light dim keeps the existing cream/gold text readable without
+            // obscuring the carnival artwork.
+            addView(
+                View(this@MainActivity).apply {
+                    setBackgroundColor(Color.argb(72, 0, 0, 0))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            addView(
+                content,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
             )
         }
     }
@@ -354,7 +394,7 @@ class MainActivity : Activity() {
 
         r.addView(space(18))
         r.addView(button("Back to Game Select") { showMenu() })
-        setContentView(r)
+        setContentView(withCarnivalBackground(r))
     }
 
     private fun statLine(label: String, value: String): TextView = TextView(this).apply {
@@ -414,7 +454,7 @@ class MainActivity : Activity() {
         r.addView(space(8))
         r.addView(button("PUNCH IT!") { startNewGame() })
         r.addView(button("Back to Menu") { showMenu() })
-        setContentView(r)
+        setContentView(withCarnivalBackground(r))
     }
 
     private fun startNewGame() {
@@ -510,7 +550,7 @@ class MainActivity : Activity() {
         }
         r.addView(quitButton)
 
-        setContentView(r)
+        setContentView(withCarnivalBackground(r))
         updateHud()
     }
 
@@ -678,7 +718,7 @@ class MainActivity : Activity() {
             startNewGame()
         })
         r.addView(button("MAIN MENU") { showMenu() })
-        setContentView(r)
+        setContentView(withCarnivalBackground(r))
     }
 
     private fun resultLine(label: String, value: String): TextView = TextView(this).apply {
