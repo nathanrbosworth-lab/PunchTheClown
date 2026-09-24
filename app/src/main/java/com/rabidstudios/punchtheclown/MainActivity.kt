@@ -558,6 +558,7 @@ class MainActivity : Activity() {
     private fun showResults(newHigh: Boolean) {
         inGame = false
         val best = prefs.getLong("high_score", 0L)
+        val bestLongestSequence = prefs.getInt("longest_sequence", 0)
         val r = root()
 
         // Match the results/fail screen's starting position to the visible
@@ -580,7 +581,7 @@ class MainActivity : Activity() {
         r.addView(resultLine("SCORE", "%,d".format(score)))
         r.addView(resultLine("BEST", "%,d".format(best)))
         r.addView(resultLine("LEVEL", level.toString()))
-        r.addView(resultLine("LONGEST SEQUENCE", longestSequence.toString()))
+        r.addView(resultLine("LONGEST SEQUENCE", bestLongestSequence.toString()))
         r.addView(resultLine("CORRECT PUNCHES", correctInputs.toString()))
         r.addView(space(14))
         r.addView(button("PUNCH AGAIN") {
