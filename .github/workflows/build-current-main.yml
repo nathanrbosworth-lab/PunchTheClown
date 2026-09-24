@@ -19,6 +19,17 @@ jobs:
         with:
           ref: main
 
+      - name: Materialize app artwork and test signing key
+        run: |
+          rm -f app/src/main/res/drawable-nodpi/clowns_01_10.webp
+          rm -f app/src/main/res/drawable-nodpi/clown_illustrated_*.jpg
+          rm -f app/src/main/res/drawable-nodpi/clown_illustrated_*.webp
+          base64 -d build-assets/m2_beta_art_resources.zip.b64 > /tmp/m2_beta_art_resources.zip
+          unzip -o /tmp/m2_beta_art_resources.zip -d app/src/main/res/drawable-nodpi
+          cat build-assets/game_select_screen_0214.b64.part* | base64 -d > app/src/main/res/drawable-nodpi/game_select_screen.webp
+          echo "a4e3ad8848324b8418ff3096633d6a9c24a61c7dcb59c9dad76dcf980044feed  app/src/main/res/drawable-nodpi/game_select_screen.webp" | sha256sum -c -
+          base64 -d build-assets/punch-the-clown-ci-debug.keystore.b64 > build-assets/punch-the-clown-ci-debug.keystore
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -36,12 +47,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build M2 Alpha debug APK
+      - name: Build current debug APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload M2 Alpha APK
+      - name: Upload current APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M2-alpha-debug
+          name: PunchTheClown-current-main
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
