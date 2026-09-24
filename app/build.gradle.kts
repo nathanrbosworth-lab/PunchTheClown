@@ -11,8 +11,8 @@ android {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.2.10-m2-beta"
+        versionCode = 13
+        versionName = "0.2.11-m2-beta"
     }
 
     signingConfigs {
