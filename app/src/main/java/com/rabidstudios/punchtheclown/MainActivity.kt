@@ -217,6 +217,21 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun marqueeTitle(widthDp: Int, heightDp: Int): ImageView {
+        return ImageView(this).apply {
+            setImageResource(R.drawable.punch_clown_marquee)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            contentDescription = "Punch the Clown"
+            layoutParams = LinearLayout.LayoutParams(
+                dp(widthDp),
+                dp(heightDp)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+    }
+
     private fun showSplash() {
         inGame = false
         gameFinished = false
@@ -422,13 +437,8 @@ class MainActivity : Activity() {
         chooseClown()
 
         val r = root()
-        val readyTitle = title("PUNCH THE CLOWN")
-        r.addView(readyTitle)
-        readyTitle.post {
-            // Move only the title down by exactly one measured title height.
-            readyTitle.translationY = readyTitle.height.toFloat()
-        }
-        r.addView(space(8))
+        r.addView(marqueeTitle(210, 140))
+        r.addView(space(4))
         r.addView(
             Space(this),
             LinearLayout.LayoutParams(1, resources.displayMetrics.heightPixels / 8)
@@ -476,6 +486,7 @@ class MainActivity : Activity() {
 
     private fun showGame() {
         val r = root()
+        r.addView(marqueeTitle(170, 113))
         val hud = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
