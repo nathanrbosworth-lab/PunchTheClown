@@ -17,6 +17,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
+import android.widget.Switch
 import android.widget.TextView
 import kotlin.math.max
 import kotlin.random.Random
@@ -64,6 +65,7 @@ class MainActivity : Activity() {
         window.navigationBarColor = dark
         prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
         audio = GameAudioManager(this)
+        audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
     }
 
@@ -192,6 +194,7 @@ class MainActivity : Activity() {
     private fun showMenu() {
         sessionToken++
         handler.removeCallbacksAndMessages(null)
+        audio.stopEventSequence()
         inGame = false
         gameFinished = false
 
@@ -236,6 +239,23 @@ class MainActivity : Activity() {
 
         root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
         root.addView(punchingTheClownsSign, FrameLayout.LayoutParams(1, 1))
+
+        val statsSettingsButton = Button(this).apply {
+            text = "STATS / SETTINGS"
+            textSize = 15f
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            setBackgroundColor(red)
+            setOnClickListener { showStatsSettings() }
+        }
+        root.addView(
+            statsSettingsButton,
+            FrameLayout.LayoutParams(dp(230), dp(52)).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                bottomMargin = dp(72)
+            }
+        )
+
         setContentView(root)
 
         root.post {
@@ -276,6 +296,82 @@ class MainActivity : Activity() {
             placeSign(punchTheClownSign, 0.52f, 0.47f, 0.98f, 0.63f)
             placeSign(punchingTheClownsSign, 0.52f, 0.63f, 0.98f, 0.80f)
         }
+    }
+
+    private fun showStatsSettings() {
+        inGame = false
+        gameFinished = false
+        audio.stopEventSequence()
+
+        val r = root()
+        r.addView(space(24))
+        r.addView(title("STATS & SETTINGS", 30f))
+        r.addView(space(18))
+
+        val best = prefs.getLong("high_score", 0L)
+        val highestLevel = prefs.getInt("highest_level", 0)
+        val longest = prefs.getInt("longest_sequence", 0)
+        val gamesPlayed = prefs.getLong("games_played", 0L)
+        val correctPunches = prefs.getLong("correct_punches", 0L)
+        val sequencesCompleted = prefs.getLong("sequences_completed", 0L)
+
+        r.addView(statLine("BEST SCORE", "%,d".format(best)))
+        r.addView(statLine("HIGHEST LEVEL", highestLevel.toString()))
+        r.addView(statLine("LONGEST SEQUENCE", longest.toString()))
+        r.addView(statLine("GAMES PLAYED", "%,d".format(gamesPlayed)))
+        r.addView(statLine("CORRECT PUNCHES", "%,d".format(correctPunches)))
+        r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(sequencesCompleted)))
+
+        r.addView(space(18))
+
+        val soundSwitch = Switch(this).apply {
+            text = "Sound"
+            textSize = 18f
+            setTextColor(cream)
+            isChecked = prefs.getBoolean("sound_enabled", true)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("sound_enabled", checked).apply()
+                audio.enabled = checked
+                if (!checked) audio.stopEventSequence()
+            }
+        }
+        r.addView(
+            soundSwitch,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val hapticsSwitch = Switch(this).apply {
+            text = "Haptics"
+            textSize = 18f
+            setTextColor(cream)
+            isChecked = prefs.getBoolean("haptics_enabled", true)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("haptics_enabled", checked).apply()
+            }
+        }
+        r.addView(
+            hapticsSwitch,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        r.addView(space(18))
+        r.addView(button("Back to Game Select") { showMenu() })
+        setContentView(r)
+    }
+
+    private fun statLine(label: String, value: String): TextView = TextView(this).apply {
+        text = "$label    $value"
+        textSize = 18f
+        setTextColor(cream)
+        gravity = Gravity.CENTER
+        setPadding(0, dp(7), 0, dp(7))
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
     }
 
     private fun chooseClown(): Int {
@@ -332,6 +428,7 @@ class MainActivity : Activity() {
     private fun startNewGame() {
         sessionToken++
         handler.removeCallbacksAndMessages(null)
+        audio.stopEventSequence()
         sequence.clear()
         playerIndex = 0
         score = 0L
@@ -498,7 +595,8 @@ class MainActivity : Activity() {
             sessionToken++
             handler.removeCallbacksAndMessages(null)
             haptic(110L, 210)
-            audio.playWrong()
+            val willBeNewHigh = score > prefs.getLong("high_score", 0L)
+            audio.playWrongThenWin(willBeNewHigh)
 
             handler.postDelayed({
                 longestSequence = max(longestSequence, sequence.size - 1)
@@ -550,14 +648,6 @@ class MainActivity : Activity() {
 
         if (newHigh) {
             haptic(180L, 165)
-
-            // The failure trumpet lasts about 2.42 seconds and begins 950 ms before
-            // this method runs. Delay the high-score trumpet long enough to let the
-            // failure trumpet finish cleanly instead of overlapping it.
-            val token = sessionToken
-            handler.postDelayed({
-                if (token == sessionToken) audio.playWin()
-            }, 1700L)
         }
         showResults(newHigh)
     }
@@ -609,6 +699,7 @@ class MainActivity : Activity() {
     }
 
     private fun haptic(durationMs: Long, amplitude: Int) {
+        if (!prefs.getBoolean("haptics_enabled", true)) return
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
         if (!vibrator.hasVibrator()) return
         vibrator.vibrate(

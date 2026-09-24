@@ -2,20 +2,26 @@ package com.rabidstudios.punchtheclown
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.SoundPool
 
 class GameAudioManager(context: Context) {
+    private val appContext = context.applicationContext
     private val pool: SoundPool
     private val gridSounds: IntArray
-    private val wrongSound: Int
-    private val winSound: Int
+    private var eventPlayer: MediaPlayer? = null
+
+    var enabled: Boolean = true
 
     init {
         val attributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        pool = SoundPool.Builder().setMaxStreams(5).setAudioAttributes(attributes).build()
+        pool = SoundPool.Builder()
+            .setMaxStreams(5)
+            .setAudioAttributes(attributes)
+            .build()
 
         gridSounds = intArrayOf(
             pool.load(context, R.raw.grid_01_clown_car, 1),
@@ -28,15 +34,68 @@ class GameAudioManager(context: Context) {
             pool.load(context, R.raw.grid_08_tiny_1, 1),
             pool.load(context, R.raw.grid_09_baby_4, 1)
         )
-        wrongSound = pool.load(context, R.raw.wrong_square_silly_trumpet_11, 1)
-        winSound = pool.load(context, R.raw.win_silly_trumpet_2, 1)
     }
 
     fun playGrid(cell: Int) {
-        if (cell in gridSounds.indices) pool.play(gridSounds[cell], 1f, 1f, 1, 0, 1f)
+        if (!enabled) return
+        if (cell in gridSounds.indices) {
+            pool.play(gridSounds[cell], 1f, 1f, 1, 0, 1f)
+        }
     }
 
-    fun playWrong() = pool.play(wrongSound, 1f, 1f, 2, 0, 1f)
-    fun playWin() = pool.play(winSound, 1f, 1f, 2, 0, 1f)
-    fun release() = pool.release()
+    fun playWrongThenWin(playWinAfter: Boolean) {
+        if (!enabled) return
+        stopEventSequence()
+
+        val wrongPlayer = MediaPlayer.create(
+            appContext,
+            R.raw.wrong_square_silly_trumpet_11
+        ) ?: return
+
+        eventPlayer = wrongPlayer
+        wrongPlayer.setOnCompletionListener { completed ->
+            completed.setOnCompletionListener(null)
+            completed.release()
+            if (eventPlayer === completed) eventPlayer = null
+
+            if (playWinAfter && enabled) {
+                playWin()
+            }
+        }
+        wrongPlayer.start()
+    }
+
+    fun playWin() {
+        if (!enabled) return
+        stopEventSequence()
+
+        val winPlayer = MediaPlayer.create(
+            appContext,
+            R.raw.win_silly_trumpet_2
+        ) ?: return
+
+        eventPlayer = winPlayer
+        winPlayer.setOnCompletionListener { completed ->
+            completed.setOnCompletionListener(null)
+            completed.release()
+            if (eventPlayer === completed) eventPlayer = null
+        }
+        winPlayer.start()
+    }
+
+    fun stopEventSequence() {
+        eventPlayer?.let { player ->
+            runCatching {
+                player.setOnCompletionListener(null)
+                if (player.isPlaying) player.stop()
+            }
+            player.release()
+        }
+        eventPlayer = null
+    }
+
+    fun release() {
+        stopEventSequence()
+        pool.release()
+    }
 }
