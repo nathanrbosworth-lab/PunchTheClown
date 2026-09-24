@@ -549,8 +549,15 @@ class MainActivity : Activity() {
             .apply()
 
         if (newHigh) {
-            audio.playWin()
             haptic(180L, 165)
+
+            // The failure trumpet lasts about 2.42 seconds and begins 950 ms before
+            // this method runs. Delay the high-score trumpet long enough to let the
+            // failure trumpet finish cleanly instead of overlapping it.
+            val token = sessionToken
+            handler.postDelayed({
+                if (token == sessionToken) audio.playWin()
+            }, 1700L)
         }
         showResults(newHigh)
     }
