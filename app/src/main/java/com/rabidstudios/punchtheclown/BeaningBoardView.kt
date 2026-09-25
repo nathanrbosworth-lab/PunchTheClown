@@ -54,6 +54,14 @@ object BeaningTuning {
 
 class BeaningBoardView(context: Context) : View(context) {
 
+    companion object {
+        // Layout measurements were authored against the approved 941 x 1672 booth.
+        // Keep them independent from the packaged bitmap resolution so artwork can
+        // be compressed without moving targets or HUD elements.
+        private const val LOGICAL_BOARD_WIDTH = 941f
+        private const val LOGICAL_BOARD_HEIGHT = 1672f
+    }
+
     enum class Phase { POPPING, ACTIVE, HIT_FALLING, MISS_FALLING }
 
     private data class Target(
@@ -473,8 +481,8 @@ class BeaningBoardView(context: Context) : View(context) {
     ) {
         val row = slot / 3
         val col = slot % 3
-        val scaleX = boardRect.width() / boardBitmap.width.toFloat()
-        val scaleY = boardRect.height() / boardBitmap.height.toFloat()
+        val scaleX = boardRect.width() / LOGICAL_BOARD_WIDTH
+        val scaleY = boardRect.height() / LOGICAL_BOARD_HEIGHT
         val cx = boardRect.left + slotXs[col] * scaleX
         val baseline = boardRect.top + slotBaselines[row] * scaleY
         val targetH = 176f * scaleY
@@ -522,15 +530,22 @@ class BeaningBoardView(context: Context) : View(context) {
     }
 
     private fun drawShelfMasks(canvas: Canvas) {
-        val scaleX = boardRect.width() / boardBitmap.width.toFloat()
-        val scaleY = boardRect.height() / boardBitmap.height.toFloat()
+        val scaleX = boardRect.width() / LOGICAL_BOARD_WIDTH
+        val scaleY = boardRect.height() / LOGICAL_BOARD_HEIGHT
         val blockerBands = arrayOf(
             792 to 844,
             1020 to 1070,
             1248 to 1303
         )
         blockerBands.forEach { (top, bottom) ->
-            val src = Rect(118, top, 819, bottom)
+            val bitmapScaleX = boardBitmap.width / LOGICAL_BOARD_WIDTH
+            val bitmapScaleY = boardBitmap.height / LOGICAL_BOARD_HEIGHT
+            val src = Rect(
+                (118f * bitmapScaleX).toInt(),
+                (top * bitmapScaleY).toInt(),
+                (819f * bitmapScaleX).toInt(),
+                (bottom * bitmapScaleY).toInt()
+            )
             val dst = RectF(
                 boardRect.left + 118f * scaleX,
                 boardRect.top + top * scaleY,
@@ -542,8 +557,8 @@ class BeaningBoardView(context: Context) : View(context) {
     }
 
     private fun drawHud(canvas: Canvas) {
-        val scaleX = boardRect.width() / boardBitmap.width.toFloat()
-        val scaleY = boardRect.height() / boardBitmap.height.toFloat()
+        val scaleX = boardRect.width() / LOGICAL_BOARD_WIDTH
+        val scaleY = boardRect.height() / LOGICAL_BOARD_HEIGHT
 
         drawHudNumber(canvas, score.toString(), 871f, 846f, 72f, 42f, scaleX, scaleY)
         drawHudNumber(canvas, level.toString(), 871f, 1015f, 72f, 42f, scaleX, scaleY)
@@ -591,8 +606,8 @@ class BeaningBoardView(context: Context) : View(context) {
 
     private fun viewToBoard(x: Float, y: Float): Pair<Float, Float>? {
         if (!boardRect.contains(x, y)) return null
-        val bx = (x - boardRect.left) * boardBitmap.width / boardRect.width()
-        val by = (y - boardRect.top) * boardBitmap.height / boardRect.height()
+        val bx = (x - boardRect.left) * LOGICAL_BOARD_WIDTH / boardRect.width()
+        val by = (y - boardRect.top) * LOGICAL_BOARD_HEIGHT / boardRect.height()
         return bx to by
     }
 
@@ -612,7 +627,7 @@ class BeaningBoardView(context: Context) : View(context) {
     }
 
     private fun computeBoardRect() {
-        val sourceRatio = boardBitmap.width.toFloat() / boardBitmap.height.toFloat()
+        val sourceRatio = LOGICAL_BOARD_WIDTH / LOGICAL_BOARD_HEIGHT
         val viewRatio = width.toFloat() / height.toFloat().coerceAtLeast(1f)
         if (viewRatio > sourceRatio) {
             val drawH = height.toFloat()
