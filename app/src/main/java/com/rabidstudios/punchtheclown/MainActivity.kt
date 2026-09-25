@@ -3,6 +3,8 @@ package com.rabidstudios.punchtheclown
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -15,6 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
@@ -60,6 +63,11 @@ class MainActivity : Activity() {
     // Clown artwork is authored at 900 x 900 pixels. Keep both the ready preview
     // and active play field at the same physical-pixel size.
     private val gameBoardSizePx = 900
+
+    // Approved six-button wooden sign sheet: 2 columns x 3 rows.
+    private val woodSignSheet: Bitmap by lazy {
+        BitmapFactory.decodeResource(resources, R.drawable.wood_sign_buttons)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -191,18 +199,43 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun button(text: String, onClick: () -> Unit): Button {
-        return Button(this).apply {
-            this.text = text
-            textSize = 17f
-            isAllCaps = false
-            setTextColor(Color.WHITE)
-            setBackgroundColor(red)
+    private fun button(text: String, onClick: () -> Unit): ImageButton {
+        val key = text.trim().uppercase()
+        val (column, row) = when (key) {
+            "PUNCH IT!" -> 0 to 0
+            "BACK TO MAIN" -> 1 to 0
+            "QUIT TO MENU" -> 0 to 1
+            "PUNCH AGAIN" -> 1 to 1
+            "MAIN MENU" -> 0 to 2
+            "BACK TO GAME SELECT" -> 1 to 2
+            else -> 0 to 0
+        }
+
+        val cellWidth = woodSignSheet.width / 2
+        val cellHeight = woodSignSheet.height / 3
+        val signBitmap = Bitmap.createBitmap(
+            woodSignSheet,
+            column * cellWidth,
+            row * cellHeight,
+            cellWidth,
+            cellHeight
+        )
+
+        return ImageButton(this).apply {
+            setImageBitmap(signBitmap)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            contentDescription = text
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(58)
-            ).apply { topMargin = dp(10) }
+                720,
+                340
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(2)
+            }
         }
     }
 
@@ -473,7 +506,7 @@ class MainActivity : Activity() {
         r.addView(subtitle("PUNCH IT BACK.", 17f))
         r.addView(space(8))
         r.addView(button("PUNCH IT!") { startNewGame() })
-        r.addView(button("Back to Menu") { showMenu() })
+        r.addView(button("Back to Main") { showMenu() })
         setContentView(withCarnivalBackground(r))
     }
 
@@ -562,16 +595,7 @@ class MainActivity : Activity() {
                 .setNegativeButton("Keep punching", null)
                 .show()
         }
-        playStack.addView(
-            quitButton,
-            LinearLayout.LayoutParams(
-                gameBoardSizePx,
-                dp(58)
-            ).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-                topMargin = dp(8)
-            }
-        )
+        playStack.addView(quitButton)
 
         // Equal flexible space centers the gameplay stack when room permits.
         // Its final translation below locks the board to the ready-screen
