@@ -21,12 +21,15 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
+import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import kotlin.math.max
 import kotlin.random.Random
 
 class MainActivity : Activity() {
+
+    private enum class ActiveGameMode { NONE, PUNCH, BEANING }
 
     private val handler = Handler(Looper.getMainLooper())
     private var sessionToken = 0
@@ -43,10 +46,13 @@ class MainActivity : Activity() {
     private var inGame = false
     private var gameFinished = false
     private var pausedByLifecycle = false
+    private var activeMode = ActiveGameMode.NONE
     private var scoreBarHeightPx = 0
     private var readyBoardTopPx = 0
 
     private lateinit var board: ClownBoardView
+    private lateinit var beaningBoard: BeaningBoardView
+    private lateinit var beaningRoot: FrameLayout
     private lateinit var scoreText: TextView
     private lateinit var levelText: TextView
     private lateinit var sequenceText: TextView
@@ -90,7 +96,11 @@ class MainActivity : Activity() {
             pausedByLifecycle = true
             sessionToken++
             handler.removeCallbacksAndMessages(null)
-            if (::board.isInitialized) board.inputEnabled = false
+            when (activeMode) {
+                ActiveGameMode.PUNCH -> if (::board.isInitialized) board.inputEnabled = false
+                ActiveGameMode.BEANING -> if (::beaningBoard.isInitialized) beaningBoard.pauseForInterruption()
+                ActiveGameMode.NONE -> Unit
+            }
         }
     }
 
@@ -99,16 +109,22 @@ class MainActivity : Activity() {
         if (pausedByLifecycle && inGame && !gameFinished) {
             pausedByLifecycle = false
             handler.post {
-                AlertDialog.Builder(this)
-                    .setTitle("HOLD YOUR PUNCHES")
-                    .setMessage("The game was paused. Resume by replaying the current sequence?")
-                    .setPositiveButton("Resume") { _, _ ->
-                        sessionToken++
-                        playSequence()
+                when (activeMode) {
+                    ActiveGameMode.PUNCH -> {
+                        AlertDialog.Builder(this)
+                            .setTitle("HOLD YOUR PUNCHES")
+                            .setMessage("The game was paused. Resume by replaying the current sequence?")
+                            .setPositiveButton("Resume") { _, _ ->
+                                sessionToken++
+                                playSequence()
+                            }
+                            .setNegativeButton("Quit") { _, _ -> quitToMenu() }
+                            .setCancelable(false)
+                            .show()
                     }
-                    .setNegativeButton("Quit") { _, _ -> quitToMenu() }
-                    .setCancelable(false)
-                    .show()
+                    ActiveGameMode.BEANING -> showBeaningPauseDialog()
+                    ActiveGameMode.NONE -> Unit
+                }
             }
         }
     }
@@ -116,12 +132,17 @@ class MainActivity : Activity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (inGame && !gameFinished) {
-            AlertDialog.Builder(this)
-                .setTitle("Quit game?")
-                .setMessage("Your current score will be lost.")
-                .setPositiveButton("Quit") { _, _ -> quitToMenu() }
-                .setNegativeButton("Keep punching", null)
-                .show()
+            if (activeMode == ActiveGameMode.BEANING) {
+                if (::beaningBoard.isInitialized) beaningBoard.pauseForInterruption()
+                showBeaningPauseDialog()
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle("Quit game?")
+                    .setMessage("Your current score will be lost.")
+                    .setPositiveButton("Quit") { _, _ -> quitToMenu() }
+                    .setNegativeButton("Keep punching", null)
+                    .show()
+            }
         } else {
             showMenu()
         }
@@ -290,8 +311,10 @@ class MainActivity : Activity() {
         sessionToken++
         handler.removeCallbacksAndMessages(null)
         audio.stopEventSequence()
+        activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
+        pausedByLifecycle = false
 
         val root = FrameLayout(this).apply {
             setBackgroundColor(dark)
@@ -323,14 +346,8 @@ class MainActivity : Activity() {
         val beaningTheClownsSign = View(this).apply {
             isClickable = true
             isFocusable = true
-            contentDescription = "Beaning the Clowns — Coming Soon"
-            setOnClickListener {
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Beaning the Clowns")
-                    .setMessage("Coming soon.")
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
+            contentDescription = "Beaning the Clowns"
+            setOnClickListener { showBeaningReady() }
         }
 
         val statsSettingsSign = View(this).apply {
@@ -386,15 +403,22 @@ class MainActivity : Activity() {
     }
 
     private fun showStatsSettings() {
+        activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
         audio.stopEventSequence()
 
-        val r = root()
-        r.addView(space(24))
+        val r = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+        }
+        r.addView(space(12))
         r.addView(title("STATS & SETTINGS", 30f))
-        r.addView(space(18))
+        r.addView(space(14))
 
+        r.addView(subtitle("PUNCH THE CLOWN", 20f))
+        r.addView(space(4))
         val best = prefs.getLong("high_score", 0L)
         val highestLevel = prefs.getInt("highest_level", 0)
         val longest = prefs.getInt("longest_sequence", 0)
@@ -409,7 +433,19 @@ class MainActivity : Activity() {
         r.addView(statLine("CORRECT PUNCHES", "%,d".format(correctPunches)))
         r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(sequencesCompleted)))
 
+        r.addView(space(16))
+        r.addView(subtitle("BEANING THE CLOWNS", 20f))
+        r.addView(space(4))
+        r.addView(statLine("BEST SCORE", "%,d".format(prefs.getLong("beaning_high_score", 0L))))
+        r.addView(statLine("HIGHEST LEVEL", prefs.getInt("beaning_highest_level", 0).toString()))
+        r.addView(statLine("TOTAL CLOWNS HIT", "%,d".format(prefs.getLong("beaning_total_hits", 0L))))
+        r.addView(statLine("TOTAL MISSES", "%,d".format(prefs.getLong("beaning_total_misses", 0L))))
+        r.addView(statLine("GAMES PLAYED", "%,d".format(prefs.getLong("beaning_games_played", 0L))))
+        r.addView(statLine("LONGEST RUN", prefs.getInt("beaning_longest_run", 0).toString()))
+
         r.addView(space(18))
+        r.addView(subtitle("SHARED SETTINGS", 18f))
+        r.addView(space(4))
 
         val soundSwitch = Switch(this).apply {
             text = "Sound"
@@ -447,9 +483,21 @@ class MainActivity : Activity() {
             )
         )
 
-        r.addView(space(18))
+        r.addView(space(12))
         r.addView(button("Back to Game Select") { showMenu() })
-        setContentView(withCarnivalBackground(r))
+        r.addView(space(20))
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            addView(
+                r,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
+        setContentView(withCarnivalBackground(scroll))
     }
 
     private fun statLine(label: String, value: String): TextView = TextView(this).apply {
@@ -473,6 +521,7 @@ class MainActivity : Activity() {
     }
 
     private fun showReady() {
+        activeMode = ActiveGameMode.NONE
         inGame = false
         chooseClown()
 
@@ -555,6 +604,7 @@ class MainActivity : Activity() {
         completedSequences = 0
         inGame = true
         gameFinished = false
+        activeMode = ActiveGameMode.PUNCH
         showGame()
         addRound()
     }
@@ -792,6 +842,7 @@ class MainActivity : Activity() {
 
     private fun showResults(newHigh: Boolean) {
         inGame = false
+        activeMode = ActiveGameMode.NONE
         val best = prefs.getLong("high_score", 0L)
         val bestLongestSequence = prefs.getInt("longest_sequence", 0)
         val r = root()
@@ -827,6 +878,292 @@ class MainActivity : Activity() {
         setContentView(withCarnivalBackground(r))
     }
 
+    private fun showBeaningReady() {
+        sessionToken++
+        handler.removeCallbacksAndMessages(null)
+        audio.stopEventSequence()
+        activeMode = ActiveGameMode.NONE
+        inGame = false
+        gameFinished = false
+        pausedByLifecycle = false
+
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(dark)
+        }
+        val preview = BeaningBoardView(this).apply {
+            previewMode = true
+            previewClown = 0
+            previewSlot = 4
+            contentDescription = "Beaning the Clowns ready screen with Bubbles"
+        }
+        root.addView(
+            preview,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val readyPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            translationY = dp(145).toFloat()
+        }
+
+        val instructions = TextView(this).apply {
+            text = "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT."
+            textSize = 18f
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = beaningWoodBackground(false)
+        }
+        readyPanel.addView(
+            instructions,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                leftMargin = dp(34)
+                rightMargin = dp(34)
+                bottomMargin = dp(10)
+            }
+        )
+
+        readyPanel.addView(beaningWoodButton("STEP RIGHT UP!", true) { startBeaningGame() })
+        readyPanel.addView(beaningWoodButton("BACK TO GAME SELECT", false) { showMenu() })
+
+        root.addView(
+            readyPanel,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+        setContentView(root)
+    }
+
+    private fun startBeaningGame() {
+        sessionToken++
+        handler.removeCallbacksAndMessages(null)
+        audio.stopEventSequence()
+        activeMode = ActiveGameMode.BEANING
+        inGame = true
+        gameFinished = false
+        pausedByLifecycle = false
+
+        beaningRoot = FrameLayout(this).apply {
+            setBackgroundColor(dark)
+        }
+        beaningBoard = BeaningBoardView(this).apply {
+            resetForNewGame()
+            contentDescription = "Beaning the Clowns carnival game board"
+            onHit = {
+                audio.playBeanHit()
+                haptic(28L, 85)
+            }
+            onMiss = {
+                audio.playBeanMiss()
+                haptic(82L, 180)
+            }
+            onGameOverStarted = {
+                audio.playBeanGameOver()
+            }
+            onGameOverFinished = {
+                finishBeaningGameAndShowResults()
+            }
+        }
+        beaningRoot.addView(
+            beaningBoard,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        setContentView(beaningRoot)
+        runBeaningReadyGo(resuming = false)
+    }
+
+    private fun runBeaningReadyGo(resuming: Boolean) {
+        if (!::beaningRoot.isInitialized || !::beaningBoard.isInitialized) return
+        sessionToken++
+        val token = sessionToken
+        handler.removeCallbacksAndMessages(null)
+
+        val cue = TextView(this).apply {
+            text = "READY"
+            textSize = 52f
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+            setShadowLayer(8f, 0f, dp(2).toFloat(), Color.BLACK)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        beaningRoot.addView(
+            cue,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(120)
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        handler.postDelayed({
+            if (token != sessionToken || activeMode != ActiveGameMode.BEANING || gameFinished) return@postDelayed
+            cue.text = "GO!"
+        }, BeaningTuning.READY_MS)
+
+        handler.postDelayed({
+            if (token != sessionToken || activeMode != ActiveGameMode.BEANING || gameFinished) return@postDelayed
+            beaningRoot.removeView(cue)
+            if (resuming) beaningBoard.resumeAfterInterruption() else beaningBoard.startGame()
+        }, BeaningTuning.READY_MS + BeaningTuning.GO_MS)
+    }
+
+    private fun showBeaningPauseDialog() {
+        if (activeMode != ActiveGameMode.BEANING || !inGame || gameFinished) return
+        if (::beaningBoard.isInitialized) beaningBoard.pauseForInterruption()
+        AlertDialog.Builder(this)
+            .setTitle("GAME PAUSED")
+            .setMessage("Beaning the Clowns is paused.")
+            .setPositiveButton("Resume") { _, _ -> runBeaningReadyGo(resuming = true) }
+            .setNegativeButton("Quit") { _, _ -> quitToMenu() }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun finishBeaningGameAndShowResults() {
+        if (gameFinished || !::beaningBoard.isInitialized) return
+        gameFinished = true
+        inGame = false
+        activeMode = ActiveGameMode.NONE
+        beaningBoard.stopGame()
+
+        val oldHigh = prefs.getLong("beaning_high_score", 0L)
+        val oldHighestLevel = prefs.getInt("beaning_highest_level", 0)
+        val oldLongestRun = prefs.getInt("beaning_longest_run", 0)
+        val newHigh = beaningBoard.score > oldHigh
+
+        prefs.edit()
+            .putLong("beaning_high_score", max(oldHigh, beaningBoard.score))
+            .putInt("beaning_highest_level", max(oldHighestLevel, beaningBoard.level))
+            .putInt("beaning_longest_run", max(oldLongestRun, beaningBoard.longestRun))
+            .putLong("beaning_games_played", prefs.getLong("beaning_games_played", 0L) + 1L)
+            .putLong("beaning_total_hits", prefs.getLong("beaning_total_hits", 0L) + beaningBoard.clownsHit)
+            .putLong("beaning_total_misses", prefs.getLong("beaning_total_misses", 0L) + beaningBoard.misses)
+            .apply()
+
+        showBeaningResults(newHigh)
+    }
+
+    private fun showBeaningResults(newHigh: Boolean) {
+        if (!::beaningRoot.isInitialized || !::beaningBoard.isInitialized) return
+
+        beaningRoot.addView(
+            View(this).apply {
+                setBackgroundColor(Color.argb(138, 0, 0, 0))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            },
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+            background = beaningWoodBackground(false)
+        }
+        panel.addView(TextView(this).apply {
+            text = "THAT'S THREE MISSES!"
+            textSize = 27f
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+        })
+        if (newHigh) {
+            panel.addView(TextView(this).apply {
+                text = "NEW HIGH SCORE!"
+                textSize = 19f
+                setTextColor(gold)
+                gravity = Gravity.CENTER
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(0, dp(4), 0, dp(5))
+            })
+        }
+
+        val bestScore = prefs.getLong("beaning_high_score", 0L)
+        val totalMisses = prefs.getLong("beaning_total_misses", 0L)
+        panel.addView(beaningResultLine("SCORE", "%,d".format(beaningBoard.score)))
+        panel.addView(beaningResultLine("BEST SCORE", "%,d".format(bestScore)))
+        panel.addView(beaningResultLine("LEVEL REACHED", beaningBoard.level.toString()))
+        panel.addView(beaningResultLine("CLOWNS HIT", beaningBoard.clownsHit.toString()))
+        panel.addView(beaningResultLine("LONGEST RUN", beaningBoard.longestRun.toString()))
+        panel.addView(beaningResultLine("TOTAL MISSES", "%,d".format(totalMisses)))
+        panel.addView(space(4))
+        panel.addView(beaningWoodButton("BEAN AGAIN", true) { startBeaningGame() })
+        panel.addView(beaningWoodButton("BACK TO GAME SELECT", false) { showMenu() })
+
+        beaningRoot.addView(
+            panel,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER
+                leftMargin = dp(28)
+                rightMargin = dp(28)
+            }
+        )
+    }
+
+    private fun beaningResultLine(label: String, value: String): TextView = TextView(this).apply {
+        text = "$label    $value"
+        textSize = 18f
+        setTextColor(if (label == "SCORE" || label == "BEST SCORE") gold else cream)
+        gravity = Gravity.CENTER
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        setPadding(0, dp(4), 0, dp(4))
+    }
+
+    private fun beaningWoodBackground(primary: Boolean): GradientDrawable = GradientDrawable().apply {
+        setColor(if (primary) Color.rgb(126, 42, 31) else Color.rgb(72, 41, 25))
+        setStroke(dp(3), gold)
+        cornerRadius = dp(10).toFloat()
+    }
+
+    private fun beaningWoodButton(
+        text: String,
+        primary: Boolean,
+        onClick: () -> Unit
+    ): TextView = TextView(this).apply {
+        this.text = text
+        textSize = if (primary) 20f else 16f
+        setTextColor(cream)
+        gravity = Gravity.CENTER
+        setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        background = beaningWoodBackground(primary)
+        isClickable = true
+        isFocusable = true
+        contentDescription = text
+        setOnClickListener { onClick() }
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(if (primary) 64 else 56)
+        ).apply {
+            leftMargin = dp(34)
+            rightMargin = dp(34)
+            topMargin = dp(5)
+        }
+    }
+
     private fun resultLine(label: String, value: String): TextView = TextView(this).apply {
         text = "$label\n$value"
         textSize = 21f
@@ -851,8 +1188,13 @@ class MainActivity : Activity() {
     private fun quitToMenu() {
         sessionToken++
         handler.removeCallbacksAndMessages(null)
+        if (activeMode == ActiveGameMode.BEANING && ::beaningBoard.isInitialized) {
+            beaningBoard.stopGame()
+        }
+        activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
+        pausedByLifecycle = false
         showMenu()
     }
 
