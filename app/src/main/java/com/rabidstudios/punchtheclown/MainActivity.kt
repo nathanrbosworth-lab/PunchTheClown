@@ -12,7 +12,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -905,23 +904,14 @@ class MainActivity : Activity() {
             )
         )
 
-        // One natural-wood instruction placard sits in the existing open space
-        // above the booth. The booth itself is not resized or moved.
-        val instructions = TextView(this).apply {
-            text = "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT."
-            setTextColor(cream)
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
-            setShadowLayer(3f, 1f, 2f, Color.rgb(58, 31, 16))
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            setAutoSizeTextTypeUniformWithConfiguration(
-                11,
-                18,
-                1,
-                TypedValue.COMPLEX_UNIT_SP
-            )
-            background = beaningNaturalWoodBackground()
+        // Blue mounted carnival placard, styled after the painted arrow signs
+        // on the approved game-select artwork. The booth is not resized or moved.
+        val instructions = BeaningCarnivalSignView(
+            this,
+            "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT.",
+            BeaningCarnivalSignView.Scheme.BLUE,
+            mountedSolidly = true
+        ).apply {
             visibility = View.INVISIBLE
             contentDescription = "Beaning the Clowns instructions"
         }
@@ -967,11 +957,11 @@ class MainActivity : Activity() {
                 (rootH - boardHeight) / 2f
             }
 
-            val sideMargin = (root.width * 0.10f).toInt()
-            val signWidth = root.width - sideMargin * 2
-            val availableHeight = (boardTop - dp(8)).toInt()
-            val signHeight = minOf(dp(82), maxOf(dp(50), availableHeight))
-            val topMargin = maxOf(dp(4), ((boardTop - signHeight) / 2f).toInt())
+            val signWidth = (root.width * 0.80f).toInt()
+            val desiredHeight = (signWidth * 0.19f).toInt()
+            val availableHeight = maxOf(1, (boardTop - dp(6)).toInt())
+            val signHeight = minOf(desiredHeight, availableHeight)
+            val topMargin = maxOf(0, ((boardTop - signHeight) / 2f).toInt())
 
             instructions.layoutParams = FrameLayout.LayoutParams(
                 signWidth,
@@ -1176,48 +1166,33 @@ class MainActivity : Activity() {
         cornerRadius = dp(10).toFloat()
     }
 
-    private fun beaningNaturalWoodBackground(): GradientDrawable =
-        GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(
-                Color.rgb(157, 104, 57),
-                Color.rgb(116, 70, 36),
-                Color.rgb(139, 86, 43)
-            )
-        ).apply {
-            setStroke(dp(3), Color.rgb(224, 166, 63))
-            cornerRadius = dp(10).toFloat()
-        }
-
     private fun beaningWoodButton(
         text: String,
         primary: Boolean,
         onClick: () -> Unit
-    ): TextView = TextView(this).apply {
-        val key = text.trim().uppercase()
-        this.text = when (key) {
+    ): BeaningCarnivalSignView {
+        val label = when (text.trim().uppercase()) {
             "STEP RIGHT UP!" -> "STEP\nRIGHT UP!"
             "BEAN AGAIN" -> "BEAN\nAGAIN"
-            else -> key
+            else -> text.trim().uppercase()
         }
-        textSize = if (primary) 18f else 14f
-        setTextColor(cream)
-        gravity = Gravity.CENTER
-        includeFontPadding = false
-        setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
-        setShadowLayer(3f, 1f, 2f, Color.rgb(58, 31, 16))
-        setPadding(dp(8), dp(4), dp(8), dp(4))
-        background = beaningNaturalWoodBackground()
-        isClickable = true
-        isFocusable = true
-        contentDescription = text
-        setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(
-            360,
-            170
+        return BeaningCarnivalSignView(
+            this,
+            label,
+            BeaningCarnivalSignView.Scheme.RED,
+            mountedSolidly = false
         ).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-            topMargin = dp(if (primary) 2 else 0)
+            isClickable = true
+            isFocusable = true
+            contentDescription = text
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                if (primary) 360 else 310,
+                if (primary) 170 else 142
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(if (primary) 2 else 0)
+            }
         }
     }
 
