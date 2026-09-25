@@ -199,7 +199,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun button(text: String, onClick: () -> Unit): ImageButton {
+    private fun button(
+        text: String,
+        widthPx: Int = 720,
+        heightPx: Int = 340,
+        onClick: () -> Unit
+    ): ImageButton {
         val key = text.trim().uppercase()
         val (column, row) = when (key) {
             "PUNCH IT!" -> 0 to 0
@@ -230,8 +235,8 @@ class MainActivity : Activity() {
             contentDescription = text
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(
-                720,
-                340
+                widthPx,
+                heightPx
             ).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
                 topMargin = dp(2)
@@ -505,8 +510,10 @@ class MainActivity : Activity() {
         r.addView(subtitle("REMEMBER THE PATTERN.", 17f))
         r.addView(subtitle("PUNCH IT BACK.", 17f))
         r.addView(space(8))
-        r.addView(button("PUNCH IT!") { startNewGame() })
-        r.addView(button("Back to Main") { showMenu() })
+        // The ready/start screen has less vertical room below the fixed
+        // 900 x 900 clown preview, so use half-size wooden sign buttons here.
+        r.addView(button("PUNCH IT!", 360, 170) { startNewGame() })
+        r.addView(button("Back to Main", 360, 170) { showMenu() })
         setContentView(withCarnivalBackground(r))
     }
 
