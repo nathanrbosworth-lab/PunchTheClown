@@ -9,6 +9,9 @@ class GameAudioManager(context: Context) {
     private val appContext = context.applicationContext
     private val pool: SoundPool
     private val gridSounds: IntArray
+    private val beanHitSound: Int
+    private val beanMissSound: Int
+    private val beanGameOverSound: Int
     private var eventPlayer: MediaPlayer? = null
 
     var enabled: Boolean = true
@@ -19,7 +22,7 @@ class GameAudioManager(context: Context) {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         pool = SoundPool.Builder()
-            .setMaxStreams(5)
+            .setMaxStreams(8)
             .setAudioAttributes(attributes)
             .build()
 
@@ -34,6 +37,9 @@ class GameAudioManager(context: Context) {
             pool.load(context, R.raw.grid_08_tiny_1, 1),
             pool.load(context, R.raw.grid_09_baby_4, 1)
         )
+        beanHitSound = pool.load(context, R.raw.bean_hit_mitt, 1)
+        beanMissSound = pool.load(context, R.raw.bean_miss_whiff, 1)
+        beanGameOverSound = pool.load(context, R.raw.bean_game_over_buzzer, 1)
     }
 
     fun playGrid(cell: Int) {
@@ -41,6 +47,21 @@ class GameAudioManager(context: Context) {
         if (cell in gridSounds.indices) {
             pool.play(gridSounds[cell], 1f, 1f, 1, 0, 1f)
         }
+    }
+
+    fun playBeanHit() {
+        if (!enabled) return
+        pool.play(beanHitSound, 1f, 1f, 1, 0, 1f)
+    }
+
+    fun playBeanMiss() {
+        if (!enabled) return
+        pool.play(beanMissSound, 1f, 1f, 2, 0, 1f)
+    }
+
+    fun playBeanGameOver() {
+        if (!enabled) return
+        pool.play(beanGameOverSound, 1f, 1f, 3, 0, 1f)
     }
 
     fun playWrongThenWin(playWinAfter: Boolean) {
