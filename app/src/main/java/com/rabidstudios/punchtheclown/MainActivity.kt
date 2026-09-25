@@ -5,16 +5,14 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -907,38 +905,37 @@ class MainActivity : Activity() {
             )
         )
 
+        // One natural-wood instruction placard sits in the existing open space
+        // above the booth. The booth itself is not resized or moved.
+        val instructions = TextView(this).apply {
+            text = "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT."
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+            setShadowLayer(3f, 1f, 2f, Color.rgb(58, 31, 16))
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setAutoSizeTextTypeUniformWithConfiguration(
+                11,
+                18,
+                1,
+                TypedValue.COMPLEX_UNIT_SP
+            )
+            background = beaningNaturalWoodBackground()
+            visibility = View.INVISIBLE
+            contentDescription = "Beaning the Clowns instructions"
+        }
+        root.addView(
+            instructions,
+            FrameLayout.LayoutParams(dp(280), dp(70)).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            }
+        )
+
         val readyPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            clipChildren = false
-            clipToPadding = false
             translationY = dp(145).toFloat()
-        }
-
-        val instructions = TextView(this).apply {
-            text = "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT."
-            textSize = 18f
-            setTextColor(cream)
-            gravity = Gravity.CENTER
-            setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
-            setPadding(dp(18), dp(14), dp(18), dp(14))
-            background = beaningWoodBackground(false)
-        }
-        readyPanel.addView(
-            instructions,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                leftMargin = dp(34)
-                rightMargin = dp(34)
-                bottomMargin = dp(10)
-            }
-        )
-        // Move only the directions placard upward by exactly twice its rendered
-        // height. The buttons keep their current vertical position.
-        instructions.post {
-            instructions.translationY = -2f * instructions.height.toFloat()
         }
 
         readyPanel.addView(beaningWoodButton("STEP RIGHT UP!", true) { startBeaningGame() })
@@ -954,6 +951,37 @@ class MainActivity : Activity() {
             }
         )
         setContentView(root)
+
+        // BeaningBoardView renders the approved 941 x 1672 artwork without
+        // changing its scale. Fit the placard into the unused top margin and
+        // keep it somewhat narrower than the booth.
+        root.post {
+            val rootW = root.width.toFloat()
+            val rootH = root.height.toFloat().coerceAtLeast(1f)
+            val boardRatio = 941f / 1672f
+            val rootRatio = rootW / rootH
+            val boardTop = if (rootRatio > boardRatio) {
+                0f
+            } else {
+                val boardHeight = rootW / boardRatio
+                (rootH - boardHeight) / 2f
+            }
+
+            val sideMargin = (root.width * 0.10f).toInt()
+            val signWidth = root.width - sideMargin * 2
+            val availableHeight = (boardTop - dp(8)).toInt()
+            val signHeight = minOf(dp(82), maxOf(dp(50), availableHeight))
+            val topMargin = maxOf(dp(4), ((boardTop - signHeight) / 2f).toInt())
+
+            instructions.layoutParams = FrameLayout.LayoutParams(
+                signWidth,
+                signHeight
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                this.topMargin = topMargin
+            }
+            instructions.visibility = View.VISIBLE
+        }
     }
 
     private fun startBeaningGame() {
@@ -1148,90 +1176,38 @@ class MainActivity : Activity() {
         cornerRadius = dp(10).toFloat()
     }
 
-    private fun beaningSignBitmap(text: String): Bitmap {
-        val key = text.trim().uppercase()
-        val cellWidth = woodSignSheet.width / 2
-        val cellHeight = woodSignSheet.height / 3
-        val (column, row, repaintLabel) = when (key) {
-            "STEP RIGHT UP!" -> Triple(0, 0, true)
-            "BEAN AGAIN" -> Triple(1, 1, true)
-            "BACK TO GAME SELECT" -> Triple(1, 2, false)
-            else -> Triple(1, 2, false)
-        }
-
-        val sign = Bitmap.createBitmap(
-            woodSignSheet,
-            column * cellWidth,
-            row * cellHeight,
-            cellWidth,
-            cellHeight
-        ).copy(Bitmap.Config.ARGB_8888, true)
-
-        if (!repaintLabel) return sign
-
-        val canvas = Canvas(sign)
-        val face = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(143, 27, 30)
-            style = Paint.Style.FILL
-        }
-        val faceRect = RectF(
-            cellWidth * 0.22f,
-            cellHeight * 0.25f,
-            cellWidth * 0.84f,
-            cellHeight * 0.80f
-        )
-        canvas.drawRoundRect(faceRect, 8f, 8f, face)
-
-        // Add simple plank seams so the relabeled center still reads as painted wood.
-        val seam = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(135, 86, 24, 22)
-            strokeWidth = 2f
-        }
-        for (fraction in floatArrayOf(0.38f, 0.54f, 0.70f)) {
-            val x = cellWidth * fraction
-            canvas.drawLine(x, faceRect.top + 3f, x, faceRect.bottom - 3f, seam)
-        }
-
-        val lines = when (key) {
-            "STEP RIGHT UP!" -> arrayOf("STEP", "RIGHT UP!")
-            "BEAN AGAIN" -> arrayOf("BEAN", "AGAIN")
-            else -> arrayOf(key)
-        }
-
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = cream
-            textAlign = Paint.Align.CENTER
-            typeface = android.graphics.Typeface.create(
-                android.graphics.Typeface.SERIF,
-                android.graphics.Typeface.BOLD
+    private fun beaningNaturalWoodBackground(): GradientDrawable =
+        GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                Color.rgb(157, 104, 57),
+                Color.rgb(116, 70, 36),
+                Color.rgb(139, 86, 43)
             )
-            textSize = if (key == "STEP RIGHT UP!") 34f else 39f
-            setShadowLayer(3f, 2f, 3f, Color.rgb(62, 24, 18))
+        ).apply {
+            setStroke(dp(3), Color.rgb(224, 166, 63))
+            cornerRadius = dp(10).toFloat()
         }
-
-        val lineHeight = textPaint.fontMetrics.run { bottom - top }
-        val startY = cellHeight * 0.47f - (lineHeight * (lines.size - 1) / 2f)
-        lines.forEachIndexed { index, line ->
-            canvas.drawText(
-                line,
-                cellWidth * 0.55f,
-                startY + index * lineHeight,
-                textPaint
-            )
-        }
-        return sign
-    }
 
     private fun beaningWoodButton(
         text: String,
         primary: Boolean,
         onClick: () -> Unit
-    ): ImageButton = ImageButton(this).apply {
-        setImageBitmap(beaningSignBitmap(text))
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        adjustViewBounds = false
-        setBackgroundColor(Color.TRANSPARENT)
-        setPadding(0, 0, 0, 0)
+    ): TextView = TextView(this).apply {
+        val key = text.trim().uppercase()
+        this.text = when (key) {
+            "STEP RIGHT UP!" -> "STEP\nRIGHT UP!"
+            "BEAN AGAIN" -> "BEAN\nAGAIN"
+            else -> key
+        }
+        textSize = if (primary) 18f else 14f
+        setTextColor(cream)
+        gravity = Gravity.CENTER
+        includeFontPadding = false
+        setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+        setShadowLayer(3f, 1f, 2f, Color.rgb(58, 31, 16))
+        setPadding(dp(8), dp(4), dp(8), dp(4))
+        background = beaningNaturalWoodBackground()
         isClickable = true
         isFocusable = true
         contentDescription = text
