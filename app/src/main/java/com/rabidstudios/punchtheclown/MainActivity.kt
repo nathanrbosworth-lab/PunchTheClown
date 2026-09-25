@@ -201,8 +201,8 @@ class MainActivity : Activity() {
 
     private fun button(
         text: String,
-        widthPx: Int = 720,
-        heightPx: Int = 340,
+        widthPx: Int = 360,
+        heightPx: Int = 170,
         onClick: () -> Unit
     ): ImageButton {
         val key = text.trim().uppercase()
@@ -510,10 +510,35 @@ class MainActivity : Activity() {
         r.addView(subtitle("REMEMBER THE PATTERN.", 17f))
         r.addView(subtitle("PUNCH IT BACK.", 17f))
         r.addView(space(8))
-        // The ready/start screen has less vertical room below the fixed
-        // 900 x 900 clown preview, so use half-size wooden sign buttons here.
-        r.addView(button("PUNCH IT!", 360, 170) { startNewGame() })
-        r.addView(button("Back to Main", 360, 170) { showMenu() })
+        // Keep the compact wooden signs side by side on the ready screen.
+        // This preserves vertical room below them for future ad placement.
+        val readyButtons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        readyButtons.addView(
+            button("PUNCH IT!") { startNewGame() }.apply {
+                (layoutParams as LinearLayout.LayoutParams).apply {
+                    marginEnd = dp(4)
+                    marginStart = dp(4)
+                }
+            }
+        )
+        readyButtons.addView(
+            button("Back to Main") { showMenu() }.apply {
+                (layoutParams as LinearLayout.LayoutParams).apply {
+                    marginEnd = dp(4)
+                    marginStart = dp(4)
+                }
+            }
+        )
+        r.addView(
+            readyButtons,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
         setContentView(withCarnivalBackground(r))
     }
 
