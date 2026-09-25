@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -496,53 +497,25 @@ class MainActivity : Activity() {
     private fun showGame() {
         val r = root()
         r.addView(marqueeTitle(170, 113))
-        val hud = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(dark)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-        }
-
-        scoreText = hudItem("SCORE", "0")
-        levelText = hudItem("LEVEL", "1")
-        sequenceText = hudItem("SEQUENCE", "1")
-        hud.addView(scoreText)
-        hud.addView(levelText)
-        hud.addView(sequenceText)
-        r.addView(
-            hud,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
 
         statusText = title("WATCH", 24f)
-        r.addView(space(8))
+        r.addView(space(6))
         r.addView(statusText)
-        r.addView(space(5))
+        r.addView(space(4))
 
-        hud.post {
-            // Move the score bar and WATCH / YOUR TURN marker down by exactly
-            // one measured score-bar height without moving the 900 x 900 board.
-            scoreBarHeightPx = hud.height
-            val shift = scoreBarHeightPx.toFloat()
-            hud.translationY = shift
-            statusText.translationY = shift
+        // Keep the board, score panel, and quit control as one visual stack.
+        // The whole stack is shifted together so the 900 x 900 board stays in
+        // exactly the same place as it was on the ready screen.
+        val playStack = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
         }
 
         board = ClownBoardView(this, currentClown, showGrid = true).apply {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
-        // Use equal weighted space above and below the fixed board so the
-        // 900 x 900 play field is vertically centered in the available play area.
-        r.addView(
-            Space(this),
-            LinearLayout.LayoutParams(1, 0, 1f)
-        )
-
-        r.addView(
+        playStack.addView(
             board,
             LinearLayout.LayoutParams(
                 gameBoardSizePx,
@@ -551,18 +524,34 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         )
-        board.post {
-            // The preview and gameplay board are both 900 x 900. Translate
-            // only the gameplay board so its top edge exactly matches the
-            // position recorded on the ready screen.
-            if (readyBoardTopPx > 0) {
-                board.translationY = (readyBoardTopPx - board.top).toFloat()
+
+        val hud = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                setColor(Color.argb(225, 27, 18, 16))
+                setStroke(dp(2), gold)
+                cornerRadius = dp(12).toFloat()
             }
         }
 
-        r.addView(
-            Space(this),
-            LinearLayout.LayoutParams(1, 0, 1f)
+        scoreText = hudItem("SCORE", "0")
+        levelText = hudItem("LEVEL", "1")
+        sequenceText = hudItem("SEQUENCE", "1")
+        hud.addView(scoreText)
+        hud.addView(levelText)
+        hud.addView(sequenceText)
+
+        playStack.addView(
+            hud,
+            LinearLayout.LayoutParams(
+                gameBoardSizePx,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(8)
+            }
         )
 
         val quitButton = button("Quit to Menu") {
@@ -572,11 +561,44 @@ class MainActivity : Activity() {
                 .setPositiveButton("Quit") { _, _ -> quitToMenu() }
                 .setNegativeButton("Keep punching", null)
                 .show()
-        }.apply {
-            // Raise by exactly one button height: the new bottom lands at the old top.
-            translationY = -dp(58).toFloat()
         }
-        r.addView(quitButton)
+        playStack.addView(
+            quitButton,
+            LinearLayout.LayoutParams(
+                gameBoardSizePx,
+                dp(58)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(8)
+            }
+        )
+
+        // Equal flexible space centers the gameplay stack when room permits.
+        // Its final translation below locks the board to the ready-screen
+        // position, while the score panel stays directly underneath it.
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, 0, 1f)
+        )
+        r.addView(
+            playStack,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        r.addView(
+            Space(this),
+            LinearLayout.LayoutParams(1, 0, 1f)
+        )
+
+        playStack.post {
+            val boardTopInRoot = playStack.top + board.top
+            if (readyBoardTopPx > 0) {
+                playStack.translationY = (readyBoardTopPx - boardTopInRoot).toFloat()
+            }
+            scoreBarHeightPx = hud.height
+        }
 
         setContentView(withCarnivalBackground(r))
         updateHud()

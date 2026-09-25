@@ -80,6 +80,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M2-beta-0.2.20-board-position-lock
+          name: PunchTheClown-M2-beta-0.2.21-scoreboard-below-board
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
