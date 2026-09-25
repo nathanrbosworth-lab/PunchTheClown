@@ -441,7 +441,10 @@ class MainActivity : Activity() {
         r.addView(space(4))
         r.addView(
             Space(this),
-            LinearLayout.LayoutParams(1, resources.displayMetrics.heightPixels / 8)
+            LinearLayout.LayoutParams(
+                1,
+                max(0, resources.displayMetrics.heightPixels / 8 - dp(58))
+            )
         )
 
         val preview = ClownBoardView(this, currentClown, showGrid = false).apply {
