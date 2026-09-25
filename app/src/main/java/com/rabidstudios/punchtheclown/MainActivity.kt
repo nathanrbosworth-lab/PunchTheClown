@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private var gameFinished = false
     private var pausedByLifecycle = false
     private var scoreBarHeightPx = 0
+    private var readyBoardTopPx = 0
 
     private lateinit var board: ClownBoardView
     private lateinit var scoreText: TextView
@@ -459,6 +460,11 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         )
+        preview.post {
+            // Remember the exact on-screen board position used by the ready
+            // screen so gameplay can keep the board perfectly stationary.
+            readyBoardTopPx = preview.top
+        }
 
         r.addView(space(8))
         r.addView(subtitle("WATCH THE SQUEAKS.", 17f))
@@ -545,6 +551,14 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         )
+        board.post {
+            // The preview and gameplay board are both 900 x 900. Translate
+            // only the gameplay board so its top edge exactly matches the
+            // position recorded on the ready screen.
+            if (readyBoardTopPx > 0) {
+                board.translationY = (readyBoardTopPx - board.top).toFloat()
+            }
+        }
 
         r.addView(
             Space(this),
