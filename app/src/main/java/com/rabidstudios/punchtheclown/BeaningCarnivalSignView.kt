@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
 import kotlin.math.cos
@@ -92,16 +91,6 @@ class BeaningCarnivalSignView(
         stroke.color = Color.rgb(226, 160, 48)
         stroke.strokeWidth = maxOf(2f, h * 0.030f)
         canvas.drawPath(sign, stroke)
-
-        if (!mountedSolidly) {
-            fill.color = Color.rgb(92, 52, 27)
-            canvas.drawRect(w * 0.46f, h * 0.07f, w * 0.54f, bodyTop + h * 0.02f, fill)
-            fill.color = Color.rgb(210, 142, 45)
-            canvas.drawOval(RectF(w * 0.455f, 0f, w * 0.545f, h * 0.18f), fill)
-            stroke.color = Color.rgb(105, 57, 21)
-            stroke.strokeWidth = maxOf(2f, h * 0.018f)
-            canvas.drawOval(RectF(w * 0.455f, 0f, w * 0.545f, h * 0.18f), stroke)
-        }
 
         drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.22f, h)
         drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.78f, h)
