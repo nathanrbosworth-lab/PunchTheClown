@@ -69,10 +69,10 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Set M3.12 current-main version
+      - name: Set M3.13 current-main version
         run: |
-          sed -i 's/versionCode = 30/versionCode = 39/' app/build.gradle.kts
-          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.12-m3-alpha"/' app/build.gradle.kts
+          sed -i 's/versionCode = 30/versionCode = 40/' app/build.gradle.kts
+          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.13-m3-alpha"/' app/build.gradle.kts
 
       - name: Build current debug APK
         run: gradle :app:assembleDebug --stacktrace
@@ -80,6 +80,6 @@ jobs:
       - name: Upload current APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M3-alpha-0.3.12-current-main
+          name: PunchTheClown-M3-alpha-0.3.13-current-main
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
