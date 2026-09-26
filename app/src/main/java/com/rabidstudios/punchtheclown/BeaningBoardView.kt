@@ -563,7 +563,8 @@ class BeaningBoardView(context: Context) : View(context) {
         drawHudNumber(canvas, score.toString(), 871f, 846f, 72f, 42f, scaleX, scaleY)
         drawHudNumber(canvas, level.toString(), 871f, 1015f, 72f, 42f, scaleX, scaleY)
 
-        val bulbYs = floatArrayOf(817f, 902f, 987f)
+        // Lower each lit miss bulb by half of its 50-board-unit rendered height.
+        val bulbYs = floatArrayOf(842f, 927f, 1012f)
         for (i in 0 until min(misses, BeaningTuning.MISS_LIMIT)) {
             val cx = boardRect.left + 74f * scaleX
             val cy = boardRect.top + bulbYs[i] * scaleY
