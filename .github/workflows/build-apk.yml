@@ -78,10 +78,10 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Set M3.6 test build version
+      - name: Set M3.7 test build version
         run: |
-          sed -i 's/versionCode = 30/versionCode = 33/' app/build.gradle.kts
-          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.6-m3-alpha"/' app/build.gradle.kts
+          sed -i 's/versionCode = 30/versionCode = 34/' app/build.gradle.kts
+          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.7-m3-alpha"/' app/build.gradle.kts
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
@@ -108,7 +108,7 @@ jobs:
           unzip -l "$APK" | grep -q "bean_hit_mitt.ogg"
           unzip -l "$APK" | grep -q "bean_miss_whiff.ogg"
           unzip -l "$APK" | grep -q "bean_game_over_buzzer.ogg"
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='33'.*versionName='0.3.6-m3-alpha'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='34'.*versionName='0.3.7-m3-alpha'"
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK"
           $ANDROID_HOME/build-tools/35.0.0/zipalign -c -v 4 "$APK"
           sha256sum "$APK"
@@ -116,6 +116,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M3-alpha-0.3.6-fullscreen-board
+          name: PunchTheClown-M3-alpha-0.3.7-larger-buttons
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

@@ -1187,9 +1187,11 @@ class MainActivity : Activity() {
             isFocusable = true
             contentDescription = text
             setOnClickListener { onClick() }
+            // Beaning buttons are intentionally 25% larger than the prior
+            // 0.3.x sizing while preserving their existing proportions.
             layoutParams = LinearLayout.LayoutParams(
-                if (primary) 360 else 310,
-                if (primary) 170 else 142
+                if (primary) 450 else 388,
+                if (primary) 213 else 178
             ).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
                 topMargin = dp(if (primary) 2 else 0)
