@@ -961,7 +961,8 @@ class MainActivity : Activity() {
             val desiredHeight = (signWidth * 0.19f).toInt()
             val availableHeight = maxOf(1, (boardTop - dp(6)).toInt())
             val signHeight = minOf(desiredHeight, availableHeight)
-            val topMargin = maxOf(0, ((boardTop - signHeight) / 2f).toInt())
+            val originalTopMargin = maxOf(0, ((boardTop - signHeight) / 2f).toInt())
+            val topMargin = originalTopMargin + (signHeight * 1.5f).toInt()
 
             instructions.layoutParams = FrameLayout.LayoutParams(
                 signWidth,
