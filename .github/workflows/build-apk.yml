@@ -82,10 +82,10 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Set M3.11 test build version
+      - name: Set M3.12 test build version
         run: |
-          sed -i 's/versionCode = 30/versionCode = 38/' app/build.gradle.kts
-          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.11-m3-alpha"/' app/build.gradle.kts
+          sed -i 's/versionCode = 30/versionCode = 39/' app/build.gradle.kts
+          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.12-m3-alpha"/' app/build.gradle.kts
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
@@ -129,7 +129,7 @@ jobs:
           verify_sign_asset "beaning_sign_bean_again.webp" "f0ec8b7b097fd2a0a9ecec52ff0192c5a5c0f69343e4bde9a6780bdb5490c894"
           verify_sign_asset "beaning_sign_back_to_game_select.webp" "8e4755bacdb7171da7f82355210d41351f1fc17d9eaf867f583dd3cb32855150"
           verify_sign_asset "beaning_sign_instructions.webp" "aad7fd9a88d6ca15e637d6b3386a6612bcdaf93651e31138c86e877c8c3b8833"
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='38'.*versionName='0.3.11-m3-alpha'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='39'.*versionName='0.3.12-m3-alpha'"
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK"
           $ANDROID_HOME/build-tools/35.0.0/zipalign -c -v 4 "$APK"
           sha256sum "$APK"
@@ -137,6 +137,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M3-alpha-0.3.11-sign-render-hotfix
+          name: PunchTheClown-M3-alpha-0.3.12-stats-section-signs
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

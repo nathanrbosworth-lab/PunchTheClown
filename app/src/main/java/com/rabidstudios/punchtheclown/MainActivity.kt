@@ -417,7 +417,7 @@ class MainActivity : Activity() {
         r.addView(title("STATS & SETTINGS", 30f))
         r.addView(space(14))
 
-        r.addView(subtitle("PUNCH THE CLOWN", 20f))
+        r.addView(statsSectionSign("PUNCH THE CLOWN"))
         r.addView(space(4))
         val best = prefs.getLong("high_score", 0L)
         val highestLevel = prefs.getInt("highest_level", 0)
@@ -434,7 +434,7 @@ class MainActivity : Activity() {
         r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(sequencesCompleted)))
 
         r.addView(space(16))
-        r.addView(subtitle("BEANING THE CLOWNS", 20f))
+        r.addView(statsSectionSign("BEANING THE CLOWNS"))
         r.addView(space(4))
         r.addView(statLine("BEST SCORE", "%,d".format(prefs.getLong("beaning_high_score", 0L))))
         r.addView(statLine("HIGHEST LEVEL", prefs.getInt("beaning_highest_level", 0).toString()))
@@ -498,6 +498,22 @@ class MainActivity : Activity() {
             )
         }
         setContentView(withCarnivalBackground(scroll))
+    }
+
+    private fun statsSectionSign(label: String): BeaningCarnivalSignView {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
+        val signHeight = (signWidth * 0.19f).toInt()
+        return BeaningCarnivalSignView(
+            this,
+            label,
+            BeaningCarnivalSignView.Scheme.BLUE,
+            mountedSolidly = true
+        ).apply {
+            contentDescription = "$label stats section"
+            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
     }
 
     private fun statLine(label: String, value: String): TextView = TextView(this).apply {
