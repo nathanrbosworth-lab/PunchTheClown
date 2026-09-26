@@ -628,18 +628,10 @@ class BeaningBoardView(context: Context) : View(context) {
     }
 
     private fun computeBoardRect() {
-        val sourceRatio = LOGICAL_BOARD_WIDTH / LOGICAL_BOARD_HEIGHT
-        val viewRatio = width.toFloat() / height.toFloat().coerceAtLeast(1f)
-        if (viewRatio > sourceRatio) {
-            val drawH = height.toFloat()
-            val drawW = drawH * sourceRatio
-            val left = (width - drawW) / 2f
-            boardRect.set(left, 0f, left + drawW, drawH)
-        } else {
-            val drawW = width.toFloat()
-            val drawH = drawW / sourceRatio
-            val top = (height - drawH) / 2f
-            boardRect.set(0f, top, drawW, top + drawH)
-        }
+        // Beaning should fill the entire playable screen just like Punch mode.
+        // Use the full view as the logical board destination so there are no
+        // dark letterbox bands on taller phones. All target/HUD coordinates
+        // already scale independently in X and Y against boardRect.
+        boardRect.set(0f, 0f, width.toFloat(), height.toFloat())
     }
 }
