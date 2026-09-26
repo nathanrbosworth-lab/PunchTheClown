@@ -78,6 +78,11 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Set M3.4 test build version
+        run: |
+          sed -i 's/versionCode = 30/versionCode = 31/' app/build.gradle.kts
+          sed -i 's/versionName = "0.3.3-m3-alpha"/versionName = "0.3.4-m3-alpha"/' app/build.gradle.kts
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
@@ -103,6 +108,7 @@ jobs:
           unzip -l "$APK" | grep -q "bean_hit_mitt.ogg"
           unzip -l "$APK" | grep -q "bean_miss_whiff.ogg"
           unzip -l "$APK" | grep -q "bean_game_over_buzzer.ogg"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='31'.*versionName='0.3.4-m3-alpha'"
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK"
           $ANDROID_HOME/build-tools/35.0.0/zipalign -c -v 4 "$APK"
           sha256sum "$APK"
