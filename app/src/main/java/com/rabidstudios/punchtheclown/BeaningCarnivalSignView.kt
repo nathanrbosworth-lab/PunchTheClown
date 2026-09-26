@@ -15,7 +15,9 @@ class BeaningCarnivalSignView(
     context: Context,
     private val label: String,
     private val scheme: Scheme,
-    private val mountedSolidly: Boolean = false
+    private val mountedSolidly: Boolean = false,
+    private val bothEndsPointed: Boolean = false,
+    private val weathered: Boolean = false
 ) : View(context) {
 
     enum class Scheme { RED, BLUE }
@@ -35,14 +37,24 @@ class BeaningCarnivalSignView(
         val bodyBottom = h * 0.92f
 
         val sign = Path().apply {
-            moveTo(w * 0.06f, bodyTop)
-            lineTo(w * 0.84f, bodyTop)
-            lineTo(w * 0.98f, (bodyTop + bodyBottom) / 2f)
-            lineTo(w * 0.84f, bodyBottom)
-            lineTo(w * 0.06f, bodyBottom)
-            lineTo(w * 0.02f, h * 0.74f)
-            lineTo(w * 0.02f, h * 0.30f)
-            close()
+            if (bothEndsPointed) {
+                moveTo(w * 0.02f, (bodyTop + bodyBottom) / 2f)
+                lineTo(w * 0.16f, bodyTop)
+                lineTo(w * 0.84f, bodyTop)
+                lineTo(w * 0.98f, (bodyTop + bodyBottom) / 2f)
+                lineTo(w * 0.84f, bodyBottom)
+                lineTo(w * 0.16f, bodyBottom)
+                close()
+            } else {
+                moveTo(w * 0.06f, bodyTop)
+                lineTo(w * 0.84f, bodyTop)
+                lineTo(w * 0.98f, (bodyTop + bodyBottom) / 2f)
+                lineTo(w * 0.84f, bodyBottom)
+                lineTo(w * 0.06f, bodyBottom)
+                lineTo(w * 0.02f, h * 0.74f)
+                lineTo(w * 0.02f, h * 0.30f)
+                close()
+            }
         }
 
         fill.color = Color.rgb(48, 28, 20)
@@ -56,11 +68,19 @@ class BeaningCarnivalSignView(
                 Color.rgb(143, 29, 31),
                 Color.rgb(177, 46, 40)
             )
-            Scheme.BLUE -> intArrayOf(
-                Color.rgb(18, 81, 118),
-                Color.rgb(13, 69, 104),
-                Color.rgb(20, 87, 123)
-            )
+            Scheme.BLUE -> if (weathered) {
+                intArrayOf(
+                    Color.rgb(46, 88, 104),
+                    Color.rgb(39, 76, 92),
+                    Color.rgb(49, 93, 108)
+                )
+            } else {
+                intArrayOf(
+                    Color.rgb(18, 81, 118),
+                    Color.rgb(13, 69, 104),
+                    Color.rgb(20, 87, 123)
+                )
+            }
         }
         val plankH = (bodyBottom - bodyTop) / 3f
         for (i in 0..2) {
@@ -81,6 +101,29 @@ class BeaningCarnivalSignView(
             stroke.color = if (i % 3 == 0) Color.argb(55, 255, 225, 170) else Color.argb(65, 24, 9, 5)
             canvas.drawLine(x, y, min(w * 0.83f, x + len), y + (i % 3 - 1), stroke)
         }
+
+        if (weathered) {
+            stroke.strokeCap = Paint.Cap.ROUND
+            stroke.strokeWidth = maxOf(1f, h * 0.012f)
+            repeat(14) { i ->
+                val x = w * (0.12f + ((i * 47) % 70) / 100f)
+                val y = bodyTop + (bodyBottom - bodyTop) * (0.12f + ((i * 31) % 72) / 100f)
+                val len = w * (0.025f + (i % 4) * 0.012f)
+                stroke.color = if (i % 2 == 0) {
+                    Color.argb(72, 239, 220, 170)
+                } else {
+                    Color.argb(82, 31, 24, 20)
+                }
+                canvas.drawLine(x, y, min(w * 0.88f, x + len), y + (i % 3 - 1) * h * 0.01f, stroke)
+            }
+            fill.color = Color.argb(30, 232, 215, 177)
+            repeat(7) { i ->
+                val cx = w * (0.18f + ((i * 13) % 60) / 100f)
+                val cy = bodyTop + (bodyBottom - bodyTop) * (0.18f + ((i * 19) % 62) / 100f)
+                canvas.drawCircle(cx, cy, h * (0.018f + (i % 3) * 0.007f), fill)
+            }
+            stroke.strokeCap = Paint.Cap.BUTT
+        }
         canvas.restore()
 
         stroke.style = Paint.Style.STROKE
@@ -92,16 +135,23 @@ class BeaningCarnivalSignView(
         stroke.strokeWidth = maxOf(2f, h * 0.030f)
         canvas.drawPath(sign, stroke)
 
-        drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.22f, h)
-        drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.78f, h)
-        drawBulb(canvas, w * 0.90f, (bodyTop + bodyBottom) / 2f, h)
-
-        if (mountedSolidly) {
-            drawStar(canvas, w * 0.16f, (bodyTop + bodyBottom) / 2f, h * 0.13f)
-            drawStar(canvas, w * 0.79f, (bodyTop + bodyBottom) / 2f, h * 0.13f)
+        if (bothEndsPointed) {
+            drawBulb(canvas, w * 0.075f, (bodyTop + bodyBottom) / 2f, h)
+            drawBulb(canvas, w * 0.925f, (bodyTop + bodyBottom) / 2f, h)
+            drawStar(canvas, w * 0.18f, (bodyTop + bodyBottom) / 2f, h * 0.12f)
+            drawStar(canvas, w * 0.82f, (bodyTop + bodyBottom) / 2f, h * 0.12f)
         } else {
-            drawStar(canvas, w * 0.17f, (bodyTop + bodyBottom) / 2f, h * 0.14f)
-            drawStar(canvas, w * 0.74f, (bodyTop + bodyBottom) / 2f, h * 0.14f)
+            drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.22f, h)
+            drawBulb(canvas, w * 0.07f, bodyTop + (bodyBottom - bodyTop) * 0.78f, h)
+            drawBulb(canvas, w * 0.90f, (bodyTop + bodyBottom) / 2f, h)
+
+            if (mountedSolidly) {
+                drawStar(canvas, w * 0.16f, (bodyTop + bodyBottom) / 2f, h * 0.13f)
+                drawStar(canvas, w * 0.79f, (bodyTop + bodyBottom) / 2f, h * 0.13f)
+            } else {
+                drawStar(canvas, w * 0.17f, (bodyTop + bodyBottom) / 2f, h * 0.14f)
+                drawStar(canvas, w * 0.74f, (bodyTop + bodyBottom) / 2f, h * 0.14f)
+            }
         }
 
         val lines = label.split("\n")
@@ -112,7 +162,7 @@ class BeaningCarnivalSignView(
             size *= 0.94f
             textPaint.textSize = size
         }
-        textPaint.color = Color.rgb(247, 231, 198)
+        textPaint.color = if (weathered) Color.rgb(238, 222, 190) else Color.rgb(247, 231, 198)
         textPaint.setShadowLayer(maxOf(2f, h * 0.02f), h * 0.012f, h * 0.018f, Color.rgb(76, 27, 16))
 
         val fm = textPaint.fontMetrics
@@ -123,6 +173,18 @@ class BeaningCarnivalSignView(
         lines.forEach { line ->
             canvas.drawText(line, cx, y, textPaint)
             y += lineHeight
+        }
+
+        if (weathered) {
+            stroke.strokeWidth = maxOf(1f, h * 0.008f)
+            stroke.strokeCap = Paint.Cap.ROUND
+            stroke.color = Color.argb(68, 79, 59, 44)
+            repeat(6) { i ->
+                val x = w * (0.31f + ((i * 11) % 34) / 100f)
+                val yy = (bodyTop + bodyBottom) / 2f + (i % 3 - 1) * h * 0.07f
+                canvas.drawLine(x, yy, x + w * (0.018f + (i % 2) * 0.012f), yy, stroke)
+            }
+            stroke.strokeCap = Paint.Cap.BUTT
         }
     }
 
