@@ -904,14 +904,11 @@ class MainActivity : Activity() {
             )
         )
 
-        // Blue mounted carnival placard, styled after the painted arrow signs
-        // on the approved game-select artwork. The booth is not resized or moved.
-        val instructions = BeaningCarnivalSignView(
-            this,
-            "HIT THE CLOWNS.\nDON'T HIT EMPTY SPOTS.\nTHREE MISSES AND YOU'RE OUT.",
-            BeaningCarnivalSignView.Scheme.BLUE,
-            mountedSolidly = true
-        ).apply {
+        // Approved Punch-style Beaning instruction artwork.
+        // The booth, placard position, and placard dimensions remain unchanged.
+        val instructions = ImageView(this).apply {
+            setImageResource(R.drawable.beaning_sign_instructions)
+            scaleType = ImageView.ScaleType.FIT_XY
             visibility = View.INVISIBLE
             contentDescription = "Beaning the Clowns instructions"
         }
@@ -1171,23 +1168,21 @@ class MainActivity : Activity() {
         text: String,
         primary: Boolean,
         onClick: () -> Unit
-    ): BeaningCarnivalSignView {
-        val label = when (text.trim().uppercase()) {
-            "STEP RIGHT UP!" -> "STEP\nRIGHT UP!"
-            "BEAN AGAIN" -> "BEAN\nAGAIN"
-            else -> text.trim().uppercase()
+    ): ImageView {
+        val drawableRes = when (text.trim().uppercase()) {
+            "STEP RIGHT UP!" -> R.drawable.beaning_sign_step_right_up
+            "BEAN AGAIN" -> R.drawable.beaning_sign_bean_again
+            "BACK TO GAME SELECT" -> R.drawable.beaning_sign_back_to_game_select
+            else -> error("Unknown Beaning button: $text")
         }
-        return BeaningCarnivalSignView(
-            this,
-            label,
-            BeaningCarnivalSignView.Scheme.RED,
-            mountedSolidly = false
-        ).apply {
+        return ImageView(this).apply {
+            setImageResource(drawableRes)
+            scaleType = ImageView.ScaleType.FIT_XY
             isClickable = true
             isFocusable = true
             contentDescription = text
             setOnClickListener { onClick() }
-            // Beaning buttons keep their 0.3.7 height but are 25% wider.
+            // Preserve the approved 0.3.8 sign dimensions.
             layoutParams = LinearLayout.LayoutParams(
                 if (primary) 563 else 485,
                 if (primary) 213 else 178
