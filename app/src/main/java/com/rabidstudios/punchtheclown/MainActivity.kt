@@ -507,7 +507,9 @@ class MainActivity : Activity() {
             this,
             label,
             BeaningCarnivalSignView.Scheme.BLUE,
-            mountedSolidly = true
+            mountedSolidly = true,
+            bothEndsPointed = true,
+            weathered = true
         ).apply {
             contentDescription = "$label stats section"
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
