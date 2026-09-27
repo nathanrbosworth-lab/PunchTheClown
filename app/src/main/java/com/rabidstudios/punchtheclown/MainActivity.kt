@@ -520,7 +520,7 @@ class MainActivity : Activity() {
 
     private fun statLine(label: String, value: String): TextView = TextView(this).apply {
         text = "$label    $value"
-        textSize = 16.5f
+        textSize = 14f
         setTextColor(cream)
         gravity = Gravity.CENTER
         setPadding(0, dp(7), 0, dp(7))
