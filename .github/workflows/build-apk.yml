@@ -143,6 +143,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           mkdir -p preview/individual
           files=(
             grid_01_clown_car.ogg
