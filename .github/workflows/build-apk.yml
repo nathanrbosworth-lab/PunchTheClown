@@ -168,9 +168,10 @@ jobs:
           done
           ffmpeg -hide_banner -loglevel error -y -f lavfi             -i anullsrc=r=44100:cl=mono -t 0.45 -ac 1 -ar 44100 preview/silence.wav
           : > preview/concat.txt
-          for i in $(seq -w 1 9); do
+          for n in $(seq 1 9); do
+            i=$(printf "%02d" "$n")
             echo "file 'individual/$i.wav'" >> preview/concat.txt
-            if [ "$i" != "9" ]; then
+            if [ "$n" != "9" ]; then
               echo "file 'silence.wav'" >> preview/concat.txt
             fi
           done
