@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,10 @@ import android.widget.Space
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.zip.InflaterInputStream
 import kotlin.math.max
 import kotlin.random.Random
 
@@ -71,8 +76,11 @@ class MainActivity : Activity() {
     private val gameBoardSizePx = 900
 
     // Approved six-button wooden sign sheet: 2 columns x 3 rows.
+    // Apply the exact approved no-post pixel patch to the existing game asset.
+    // This preserves the original artwork rather than re-rendering the signs.
     private val woodSignSheet: Bitmap by lazy {
-        BitmapFactory.decodeResource(resources, R.drawable.wood_sign_buttons)
+        val source = BitmapFactory.decodeResource(resources, R.drawable.wood_sign_buttons)
+        applyApprovedNoPostPatch(source)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -263,6 +271,37 @@ class MainActivity : Activity() {
                 topMargin = dp(2)
             }
         }
+    }
+
+    private fun applyApprovedNoPostPatch(source: Bitmap): Bitmap {
+        require(source.width == 720 && source.height == 510) {
+            "Unexpected Punch sign sheet dimensions: ${source.width}x${source.height}"
+        }
+
+        val encoded = resources.openRawResource(R.raw.wood_sign_no_posts_patch)
+            .bufferedReader()
+            .use { it.readText().trim() }
+        val compressed = Base64.decode(encoded, Base64.DEFAULT)
+        val bytes = InflaterInputStream(ByteArrayInputStream(compressed)).use { it.readBytes() }
+        val data = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+
+        val patched = source.copy(Bitmap.Config.ARGB_8888, true)
+        val runCount = data.int
+        repeat(runCount) {
+            val y = data.short.toInt() and 0xffff
+            val x = data.short.toInt() and 0xffff
+            val length = data.short.toInt() and 0xffff
+            val pixels = IntArray(length)
+            for (i in 0 until length) {
+                val red = data.get().toInt() and 0xff
+                val green = data.get().toInt() and 0xff
+                val blue = data.get().toInt() and 0xff
+                val alpha = data.get().toInt() and 0xff
+                pixels[i] = Color.argb(alpha, red, green, blue)
+            }
+            patched.setPixels(pixels, 0, length, x, y, length, 1)
+        }
+        return patched
     }
 
     private fun space(height: Int): Space = Space(this).apply {
