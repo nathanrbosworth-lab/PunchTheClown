@@ -139,6 +139,49 @@ jobs:
           $ANDROID_HOME/build-tools/35.0.0/zipalign -c -v 4 "$APK"
           sha256sum "$APK"
 
+      - name: Build one-octave-lower Punch sound preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p preview/individual
+          files=(
+            grid_01_clown_car.ogg
+            grid_02_freesound_squeak.ogg
+            grid_03_squeak_3.ogg
+            grid_04_squeak_2.ogg
+            grid_05_squeak_1.ogg
+            grid_06_baby_1.ogg
+            grid_07_baby_2.ogg
+            grid_08_tiny_1.ogg
+            grid_09_baby_4.ogg
+          )
+          i=1
+          for name in "${files[@]}"; do
+            src="app/src/main/res/raw/$name"
+            sr=$(ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of csv=p=0 "$src")
+            half=$((sr / 2))
+            out=$(printf "preview/individual/%02d.wav" "$i")
+            ffmpeg -hide_banner -loglevel error -y -i "$src"               -filter:a "asetrate=$half,aresample=44100,atempo=2.0"               -ac 1 -ar 44100 "$out"
+            i=$((i + 1))
+          done
+          ffmpeg -hide_banner -loglevel error -y -f lavfi             -i anullsrc=r=44100:cl=mono -t 0.45 -ac 1 -ar 44100 preview/silence.wav
+          : > preview/concat.txt
+          for i in $(seq -w 1 9); do
+            echo "file 'individual/$i.wav'" >> preview/concat.txt
+            if [ "$i" != "9" ]; then
+              echo "file 'silence.wav'" >> preview/concat.txt
+            fi
+          done
+          ffmpeg -hide_banner -loglevel error -y             -f concat -safe 0 -i preview/concat.txt             -c:a libmp3lame -q:a 2             preview/PunchTheClown_9_board_sounds_one_octave_lower_preview.mp3
+          ffprobe -v error -show_entries format=duration,size             -of default=noprint_wrappers=1             preview/PunchTheClown_9_board_sounds_one_octave_lower_preview.mp3
+
+      - name: Upload sound preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: PunchTheClown-9-board-sounds-one-octave-lower-preview
+          path: preview/PunchTheClown_9_board_sounds_one_octave_lower_preview.mp3
+          if-no-files-found: error
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
