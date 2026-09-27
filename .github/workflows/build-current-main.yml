@@ -27,8 +27,8 @@ jobs:
           base64 -d build-assets/m2_beta_art_resources.zip.b64 > /tmp/m2_beta_art_resources.zip
           unzip -o /tmp/m2_beta_art_resources.zip -d app/src/main/res/drawable-nodpi
           cat build-assets/game_select_screen_0214.b64.part* | base64 -d > app/src/main/res/drawable-nodpi/game_select_screen.webp
-          cat build-assets/rabid_studios_splash_768.webp.b64.part* | base64 -d > app/src/main/res/drawable-nodpi/rabid_studios_splash.webp
-          echo "19b2062c3081dd99b487ef9a33921faaffc233e61d6dbad73d166576f7ba4ce6  app/src/main/res/drawable-nodpi/rabid_studios_splash.webp" | sha256sum -c -
+          cat build-assets/rabid_studios_splash_512.webp.b64.part* | base64 -d > app/src/main/res/drawable-nodpi/rabid_studios_splash.webp
+          echo "f2e9e9bc00f2158cd67d39b77beebda8324f99fa3b80c1623910c0a127877428  app/src/main/res/drawable-nodpi/rabid_studios_splash.webp" | sha256sum -c -
           echo "a4e3ad8848324b8418ff3096633d6a9c24a61c7dcb59c9dad76dcf980044feed  app/src/main/res/drawable-nodpi/game_select_screen.webp" | sha256sum -c -
           test -f app/src/main/res/drawable-nodpi/carnival_background.webp
           test -f app/src/main/res/drawable-nodpi/punch_clown_marquee.webp
