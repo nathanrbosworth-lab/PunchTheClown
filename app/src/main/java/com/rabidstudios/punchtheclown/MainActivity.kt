@@ -297,11 +297,13 @@ class MainActivity : Activity() {
         inGame = false
         gameFinished = false
 
-        val image = approvedArt(
-            R.drawable.punch_clown_splash,
-            ImageView.ScaleType.CENTER_CROP
-        )
-        image.setBackgroundColor(dark)
+        val image = ImageView(this).apply {
+            setImageResource(R.drawable.rabid_studios_splash)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            setBackgroundColor(Color.BLACK)
+            contentDescription = "Rabid Studios"
+        }
         setContentView(image)
 
         handler.postDelayed({ showMenu() }, 1800L)
