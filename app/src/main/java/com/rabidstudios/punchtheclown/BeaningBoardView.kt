@@ -605,9 +605,9 @@ class BeaningBoardView(context: Context) : View(context) {
         drawHudNumber(canvas, score.toString(), 871f, 846f, 72f, 42f, scaleX, scaleY)
         drawHudNumber(canvas, level.toString(), 871f, 1015f, 72f, 42f, scaleX, scaleY)
 
-        // Fine-tune the miss bulbs upward: top ~2 mm visually (~20 board units),
-        // lower two by half of their 50-board-unit rendered height (25 units).
-        val bulbYs = floatArrayOf(822f, 902f, 987f)
+        // Lower only the top and middle miss bulbs by half of their
+        // 50-board-unit rendered height (25 units). Bottom stays unchanged.
+        val bulbYs = floatArrayOf(847f, 927f, 987f)
         for (i in 0 until min(misses, BeaningTuning.MISS_LIMIT)) {
             val cx = boardRect.left + 74f * scaleX
             val cy = boardRect.top + bulbYs[i] * scaleY
