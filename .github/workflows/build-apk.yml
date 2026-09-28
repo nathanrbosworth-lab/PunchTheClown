@@ -54,6 +54,7 @@ jobs:
           echo "de6b88211ccebbe558d52c71e693d63e2f8dc114aa6abb0418b0db499556265f  /tmp/m3_beaning_targets_06_40_compact.zip" | sha256sum -c -
           unzip -o /tmp/m3_beaning_targets_06_40_compact.zip -d app/src/main/res
           test "$(find app/src/main/res/drawable-nodpi -maxdepth 1 -name 'beaning_target_*.webp' | wc -l)" -eq 40
+          test -f app/src/main/res/drawable-nodpi/beaning_target_39_firefly.webp
           test -f app/src/main/res/drawable-nodpi/beaning_board.webp
           test -f app/src/main/res/drawable-nodpi/beaning_target_00_bubbles.webp
           test -f app/src/main/res/drawable-nodpi/beaning_target_01_noodles.webp
