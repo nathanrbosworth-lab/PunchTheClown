@@ -64,6 +64,8 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var audio: GameAudioManager
     private lateinit var prefs: android.content.SharedPreferences
+    private lateinit var localStats: LocalStatsRepository
+    private lateinit var leaderboardGateway: LeaderboardGateway
 
     private val cream = Color.rgb(247, 231, 198)
     private val gold = Color.rgb(232, 182, 75)
@@ -88,8 +90,11 @@ class MainActivity : Activity() {
         window.statusBarColor = dark
         window.navigationBarColor = dark
         prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
+        localStats = LocalStatsRepository(prefs)
+        leaderboardGateway = PlayGamesLeaderboardGateway(this)
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
+        leaderboardGateway.refreshAuthentication()
         showSplash()
     }
 
@@ -114,6 +119,9 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (::leaderboardGateway.isInitialized) {
+            leaderboardGateway.refreshAuthentication()
+        }
         if (pausedByLifecycle && inGame && !gameFinished) {
             pausedByLifecycle = false
             handler.post {
@@ -460,29 +468,25 @@ class MainActivity : Activity() {
 
         r.addView(statsSectionSign("PUNCH THE CLOWN"))
         r.addView(space(4))
-        val best = prefs.getLong("high_score", 0L)
-        val highestLevel = prefs.getInt("highest_level", 0)
-        val longest = prefs.getInt("longest_sequence", 0)
-        val gamesPlayed = prefs.getLong("games_played", 0L)
-        val correctPunches = prefs.getLong("correct_punches", 0L)
-        val sequencesCompleted = prefs.getLong("sequences_completed", 0L)
+        val punchStats = localStats.punchStats()
 
-        r.addView(statLine("BEST SCORE", "%,d".format(best)))
-        r.addView(statLine("HIGHEST LEVEL", highestLevel.toString()))
-        r.addView(statLine("LONGEST SEQUENCE", longest.toString()))
-        r.addView(statLine("GAMES PLAYED", "%,d".format(gamesPlayed)))
-        r.addView(statLine("CORRECT PUNCHES", "%,d".format(correctPunches)))
-        r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(sequencesCompleted)))
+        r.addView(statLine("BEST SCORE", "%,d".format(punchStats.highScore)))
+        r.addView(statLine("HIGHEST LEVEL", punchStats.highestLevel.toString()))
+        r.addView(statLine("LONGEST SEQUENCE", punchStats.longestSequence.toString()))
+        r.addView(statLine("GAMES PLAYED", "%,d".format(punchStats.gamesPlayed)))
+        r.addView(statLine("CORRECT PUNCHES", "%,d".format(punchStats.correctPunches)))
+        r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(punchStats.sequencesCompleted)))
 
         r.addView(space(16))
         r.addView(statsSectionSign("BEANING THE CLOWNS"))
         r.addView(space(4))
-        r.addView(statLine("BEST SCORE", "%,d".format(prefs.getLong("beaning_high_score", 0L))))
-        r.addView(statLine("HIGHEST LEVEL", prefs.getInt("beaning_highest_level", 0).toString()))
-        r.addView(statLine("TOTAL CLOWNS HIT", "%,d".format(prefs.getLong("beaning_total_hits", 0L))))
-        r.addView(statLine("TOTAL MISSES", "%,d".format(prefs.getLong("beaning_total_misses", 0L))))
-        r.addView(statLine("GAMES PLAYED", "%,d".format(prefs.getLong("beaning_games_played", 0L))))
-        r.addView(statLine("LONGEST RUN", prefs.getInt("beaning_longest_run", 0).toString()))
+        val beaningStats = localStats.beaningStats()
+        r.addView(statLine("BEST SCORE", "%,d".format(beaningStats.highScore)))
+        r.addView(statLine("HIGHEST LEVEL", beaningStats.highestLevel.toString()))
+        r.addView(statLine("TOTAL CLOWNS HIT", "%,d".format(beaningStats.totalHits)))
+        r.addView(statLine("TOTAL MISSES", "%,d".format(beaningStats.totalMisses)))
+        r.addView(statLine("GAMES PLAYED", "%,d".format(beaningStats.gamesPlayed)))
+        r.addView(statLine("LONGEST RUN", beaningStats.longestRun.toString()))
 
         r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
@@ -842,7 +846,7 @@ class MainActivity : Activity() {
             sessionToken++
             handler.removeCallbacksAndMessages(null)
             haptic(110L, 210)
-            val willBeNewHigh = score > prefs.getLong("high_score", 0L)
+            val willBeNewHigh = score > localStats.punchStats().highScore
             audio.playWrongThenWin(willBeNewHigh)
 
             handler.postDelayed({
@@ -876,22 +880,15 @@ class MainActivity : Activity() {
     }
 
     private fun finishGameAndShowResults() {
-        val oldHigh = prefs.getLong("high_score", 0L)
-        val oldHighestLevel = prefs.getInt("highest_level", 0)
-        val oldLongest = prefs.getInt("longest_sequence", 0)
-        val newHigh = score > oldHigh
-
-        prefs.edit()
-            .putLong("high_score", max(oldHigh, score))
-            .putInt("highest_level", max(oldHighestLevel, level))
-            .putInt("longest_sequence", max(oldLongest, longestSequence))
-            .putLong("games_played", prefs.getLong("games_played", 0L) + 1L)
-            .putLong("correct_punches", prefs.getLong("correct_punches", 0L) + correctInputs)
-            .putLong(
-                "sequences_completed",
-                prefs.getLong("sequences_completed", 0L) + completedSequences
-            )
-            .apply()
+        val result = GameResult(
+            mode = GameMode.PUNCH,
+            score = score,
+            level = level,
+            longestRun = longestSequence,
+            hits = correctInputs,
+            completedRounds = completedSequences
+        )
+        val newHigh = localStats.record(result)
 
         if (newHigh) {
             haptic(180L, 165)
@@ -902,8 +899,9 @@ class MainActivity : Activity() {
     private fun showResults(newHigh: Boolean) {
         inGame = false
         activeMode = ActiveGameMode.NONE
-        val best = prefs.getLong("high_score", 0L)
-        val bestLongestSequence = prefs.getInt("longest_sequence", 0)
+        val punchStats = localStats.punchStats()
+        val best = punchStats.highScore
+        val bestLongestSequence = punchStats.longestSequence
         val r = root()
 
         // Match the results/fail screen's starting position to the visible
@@ -1128,19 +1126,15 @@ class MainActivity : Activity() {
         activeMode = ActiveGameMode.NONE
         beaningBoard.stopGame()
 
-        val oldHigh = prefs.getLong("beaning_high_score", 0L)
-        val oldHighestLevel = prefs.getInt("beaning_highest_level", 0)
-        val oldLongestRun = prefs.getInt("beaning_longest_run", 0)
-        val newHigh = beaningBoard.score > oldHigh
-
-        prefs.edit()
-            .putLong("beaning_high_score", max(oldHigh, beaningBoard.score))
-            .putInt("beaning_highest_level", max(oldHighestLevel, beaningBoard.level))
-            .putInt("beaning_longest_run", max(oldLongestRun, beaningBoard.longestRun))
-            .putLong("beaning_games_played", prefs.getLong("beaning_games_played", 0L) + 1L)
-            .putLong("beaning_total_hits", prefs.getLong("beaning_total_hits", 0L) + beaningBoard.clownsHit)
-            .putLong("beaning_total_misses", prefs.getLong("beaning_total_misses", 0L) + beaningBoard.misses)
-            .apply()
+        val result = GameResult(
+            mode = GameMode.BEANING,
+            score = beaningBoard.score,
+            level = beaningBoard.level,
+            longestRun = beaningBoard.longestRun,
+            hits = beaningBoard.clownsHit,
+            misses = beaningBoard.misses
+        )
+        val newHigh = localStats.record(result)
 
         showBeaningResults(newHigh)
     }
@@ -1183,8 +1177,9 @@ class MainActivity : Activity() {
             })
         }
 
-        val bestScore = prefs.getLong("beaning_high_score", 0L)
-        val totalMisses = prefs.getLong("beaning_total_misses", 0L)
+        val beaningStats = localStats.beaningStats()
+        val bestScore = beaningStats.highScore
+        val totalMisses = beaningStats.totalMisses
         panel.addView(beaningResultLine("SCORE", "%,d".format(beaningBoard.score)))
         panel.addView(beaningResultLine("BEST SCORE", "%,d".format(bestScore)))
         panel.addView(beaningResultLine("LEVEL REACHED", beaningBoard.level.toString()))

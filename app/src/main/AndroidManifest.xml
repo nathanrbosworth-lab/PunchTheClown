@@ -9,6 +9,10 @@
         android:label="Punch the Clown"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <meta-data
+            android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/game_services_project_id" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

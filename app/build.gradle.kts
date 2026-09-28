@@ -11,8 +11,8 @@ android {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
         targetSdk = 35
-        versionCode = 48
-        versionName = "0.3.21-m3-beta"
+        versionCode = 49
+        versionName = "0.4.0-m4-alpha"
     }
 
     signingConfigs {
@@ -42,4 +42,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+
+dependencies {
+    implementation("com.google.android.gms:play-services-games-v2:22.1.0")
 }

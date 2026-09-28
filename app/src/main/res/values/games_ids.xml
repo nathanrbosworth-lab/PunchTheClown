@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replace from Play Console > Play Games Services > Get resources. -->
+    <string name="game_services_project_id" translatable="false">0000000000</string>
+</resources>
