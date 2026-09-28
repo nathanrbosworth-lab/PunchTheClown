@@ -38,7 +38,7 @@ object BeaningTuning {
     const val GO_MS = 500L
 
     const val RECENT_CLOWN_HISTORY = 3
-    const val TEST_CLOWN_COUNT = 5
+    const val TEST_CLOWN_COUNT = 40
     const val TEST_MAX_SIMULTANEOUS_TARGETS = 5
 
     fun reactionWindowForLevel(level: Int): Long = max(
@@ -117,13 +117,55 @@ class BeaningBoardView(context: Context) : View(context) {
     }
 
     private val targetBitmaps: Array<Bitmap> by lazy {
-        arrayOf(
-            BitmapFactory.decodeResource(resources, R.drawable.beaning_target_00_bubbles),
-            BitmapFactory.decodeResource(resources, R.drawable.beaning_target_01_noodles),
-            BitmapFactory.decodeResource(resources, R.drawable.beaning_target_02_sparky),
-            BitmapFactory.decodeResource(resources, R.drawable.beaning_target_03_patches),
-            BitmapFactory.decodeResource(resources, R.drawable.beaning_target_04_giggles)
+        val targetNames = arrayOf(
+            "beaning_target_00_bubbles",
+            "beaning_target_01_noodles",
+            "beaning_target_02_sparky",
+            "beaning_target_03_patches",
+            "beaning_target_04_giggles",
+            "beaning_target_05_snickers",
+            "beaning_target_06_dizzy",
+            "beaning_target_07_twinkle",
+            "beaning_target_08_sunny",
+            "beaning_target_09_misty",
+            "beaning_target_10_zippy",
+            "beaning_target_11_coco",
+            "beaning_target_12_lulu",
+            "beaning_target_13_jester",
+            "beaning_target_14_pickles",
+            "beaning_target_15_buttons",
+            "beaning_target_16_marbles",
+            "beaning_target_17_wiggles",
+            "beaning_target_18_pogo",
+            "beaning_target_19_skittles",
+            "beaning_target_20_velvet",
+            "beaning_target_21_doodle",
+            "beaning_target_22_sprinkles",
+            "beaning_target_23_biscuit",
+            "beaning_target_24_jelly",
+            "beaning_target_25_ruffles",
+            "beaning_target_26_bozo",
+            "beaning_target_27_pebbles",
+            "beaning_target_28_ripple",
+            "beaning_target_29_slinky",
+            "beaning_target_30_maple",
+            "beaning_target_31_blizzard",
+            "beaning_target_32_tango",
+            "beaning_target_33_kiwi",
+            "beaning_target_34_galaxy",
+            "beaning_target_35_taffy",
+            "beaning_target_36_skipper",
+            "beaning_target_37_sunny_d",
+            "beaning_target_38_midnight",
+            "beaning_target_39_firefly"
         )
+        require(targetNames.size == BeaningTuning.TEST_CLOWN_COUNT)
+
+        targetNames.map { name ->
+            val resourceId = resources.getIdentifier(name, "drawable", context.packageName)
+            require(resourceId != 0) { "Missing Beaning target resource: $name" }
+            BitmapFactory.decodeResource(resources, resourceId)
+        }.toTypedArray()
     }
 
     private val boardRect = RectF()
