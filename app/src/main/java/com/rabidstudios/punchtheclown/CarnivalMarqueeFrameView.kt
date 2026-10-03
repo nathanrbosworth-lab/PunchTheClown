@@ -143,10 +143,20 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         super.onDraw(canvas)
         if (width <= 0 || height <= 0) return
 
+        // The reference frame needs to be slightly taller than the square
+        // gameplay board so its top/bottom rails cover the board's own cream
+        // edge strips. The board itself remains exactly 900 x 900 and its
+        // touch geometry is unchanged.
+        val verticalOverhang = height * FRAME_VERTICAL_OVERHANG
         canvas.drawBitmap(
             frameBitmap,
             null,
-            RectF(0f, 0f, width.toFloat(), height.toFloat()),
+            RectF(
+                0f,
+                -verticalOverhang,
+                width.toFloat(),
+                height + verticalOverhang
+            ),
             framePaint
         )
 
@@ -163,7 +173,7 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
                 else -> 1.0f
             }
             val cx = p.first * width
-            val cy = p.second * height
+            val cy = ((p.second - 0.5f) * FRAME_VERTICAL_SCALE + 0.5f) * height
 
             // The extracted frame contains its original warm bulb halo.
             // These layers recolor the glass/socket while allowing that halo
@@ -278,6 +288,12 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         )
 
     companion object {
+        // 6% vertical stretch: approximately 3% beyond the board at both the
+        // top and bottom. This covers the board's cream strips while keeping
+        // width and gameplay coordinates untouched.
+        private const val FRAME_VERTICAL_SCALE = 1.06f
+        private const val FRAME_VERTICAL_OVERHANG = 0.03f
+
         // Normalized centers measured from the approved 512 x 512 frame asset.
         // Order runs clockwise so the existing chase animation travels around
         // the physical bulb sockets exactly.
