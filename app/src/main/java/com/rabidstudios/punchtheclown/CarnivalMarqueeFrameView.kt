@@ -1,13 +1,11 @@
 package com.rabidstudios.punchtheclown
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Shader
 import android.view.View
 import kotlin.math.min
 
@@ -20,10 +18,12 @@ enum class CarnivalLightMode {
 }
 
 /**
- * Thick, ornate midway frame based on the approved Punch board mockup.
+ * Punch marquee overlay using the approved ornate red carnival frame extracted
+ * from the reference mockup. The artwork is static; animated bulb color and
+ * gameplay reactions are drawn independently over its original bulb sockets.
  *
- * It is a pure overlay: it owns no gameplay state, never consumes touch
- * input, and leaves ClownBoardView's 3x3 hit geometry unchanged.
+ * This view never consumes touch input and does not alter ClownBoardView's
+ * 3x3 hit geometry.
  */
 class CarnivalMarqueeFrameView(context: Context) : View(context) {
 
@@ -45,38 +45,19 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         WRONG
     }
 
-    private val darkWood = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
+    private val frameBitmap by lazy {
+        BitmapFactory.decodeResource(resources, R.drawable.punch_ornate_frame)
     }
-    private val redWood = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
-    }
-    private val amberEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = Color.rgb(234, 116, 30)
-    }
-    private val gold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        color = Color.rgb(221, 159, 56)
-    }
-    private val antiqueGold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.rgb(170, 103, 29)
-    }
-    private val scratch = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-    }
+
+    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
     private val socketOuter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.rgb(74, 37, 20)
+        color = Color.argb(225, 74, 37, 20)
     }
     private val socketInner = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.rgb(31, 18, 14)
+        color = Color.argb(235, 31, 18, 14)
     }
     private val bulbPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -162,172 +143,48 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         super.onDraw(canvas)
         if (width <= 0 || height <= 0) return
 
-        val s = min(width, height).toFloat()
-        val inset = s * 0.032f
-        val rect = RectF(inset, inset, width - inset, height - inset)
-        val corner = s * 0.055f
-
-        // Heavy distressed red carnival wood like the approved mockup.
-        darkWood.strokeWidth = s * 0.112f
-        darkWood.shader = LinearGradient(
-            0f, 0f, width.toFloat(), height.toFloat(),
-            intArrayOf(
-                Color.rgb(73, 29, 18),
-                Color.rgb(135, 48, 24),
-                Color.rgb(83, 30, 19)
-            ),
+        canvas.drawBitmap(
+            frameBitmap,
             null,
-            Shader.TileMode.CLAMP
-        )
-        canvas.drawRoundRect(rect, corner, corner, darkWood)
-
-        redWood.strokeWidth = s * 0.087f
-        redWood.shader = LinearGradient(
-            0f, 0f, width.toFloat(), height.toFloat(),
-            intArrayOf(
-                Color.rgb(124, 43, 25),
-                Color.rgb(189, 69, 27),
-                Color.rgb(104, 35, 24)
-            ),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        canvas.drawRoundRect(rect, corner, corner, redWood)
-
-        // Orange inner bevel and antique-gold trim.
-        amberEdge.strokeWidth = s * 0.012f
-        val innerInset = s * 0.073f
-        canvas.drawRoundRect(
-            RectF(innerInset, innerInset, width - innerInset, height - innerInset),
-            s * 0.024f,
-            s * 0.024f,
-            amberEdge
+            RectF(0f, 0f, width.toFloat(), height.toFloat()),
+            framePaint
         )
 
-        gold.strokeWidth = s * 0.0055f
-        canvas.drawRoundRect(rect, corner, corner, gold)
-        canvas.drawRoundRect(
-            RectF(s * 0.082f, s * 0.082f, width - s * 0.082f, height - s * 0.082f),
-            s * 0.020f,
-            s * 0.020f,
-            gold
-        )
-
-        drawWeathering(canvas, s)
-        drawOrnaments(canvas, s)
-        drawBulbs(canvas, s)
-    }
-
-    private fun drawWeathering(canvas: Canvas, s: Float) {
-        // Deterministic short scratches keep the frame visually distressed
-        // without random flicker between animation frames.
-        val rail = s * 0.105f
-        for (i in 0 until 34) {
-            val u = ((i * 37) % 97) / 97f
-            val v = ((i * 61 + 13) % 89) / 89f
-            val horizontal = i % 2 == 0
-
-            scratch.strokeWidth = if (i % 3 == 0) s * 0.0024f else s * 0.0015f
-            scratch.color = if (i % 4 == 0) {
-                Color.argb(120, 244, 170, 76)
-            } else {
-                Color.argb(105, 61, 26, 20)
-            }
-
-            if (horizontal) {
-                val y = if (i % 4 < 2) s * (0.035f + v * 0.060f) else height - s * (0.035f + v * 0.060f)
-                val x = s * (0.11f + u * 0.72f)
-                canvas.drawLine(x, y, x + s * (0.018f + (i % 5) * 0.006f), y + s * 0.002f, scratch)
-            } else {
-                val x = if (i % 4 < 2) s * (0.035f + u * 0.060f) else width - s * (0.035f + u * 0.060f)
-                val y = s * (0.12f + v * 0.70f)
-                canvas.drawLine(x, y, x + s * 0.002f, y + s * (0.020f + (i % 4) * 0.006f), scratch)
-            }
-        }
-    }
-
-    private fun drawOrnaments(canvas: Canvas, s: Float) {
-        gold.strokeWidth = s * 0.007f
-
-        // Top and bottom center carved flourishes.
-        drawCenterCrest(canvas, width / 2f, s * 0.050f, s, top = true)
-        drawCenterCrest(canvas, width / 2f, height - s * 0.050f, s, top = false)
-
-        // Curled corner scrollwork.
-        val r = s * 0.058f
-        val centers = arrayOf(
-            Triple(s * 0.067f, s * 0.067f, 180f),
-            Triple(width - s * 0.067f, s * 0.067f, 270f),
-            Triple(s * 0.067f, height - s * 0.067f, 90f),
-            Triple(width - s * 0.067f, height - s * 0.067f, 0f)
-        )
-        centers.forEach { (cx, cy, start) ->
-            val arc = RectF(cx - r, cy - r, cx + r, cy + r)
-            canvas.drawArc(arc, start, 205f, false, gold)
-            canvas.drawCircle(cx, cy, s * 0.012f, antiqueGold)
-            canvas.drawCircle(cx, cy, s * 0.006f, gold)
-        }
-    }
-
-    private fun drawCenterCrest(
-        canvas: Canvas,
-        cx: Float,
-        cy: Float,
-        s: Float,
-        top: Boolean
-    ) {
-        val sign = if (top) 1f else -1f
-        val p = Path().apply {
-            moveTo(cx, cy - sign * s * 0.010f)
-            cubicTo(
-                cx - s * 0.020f, cy + sign * s * 0.010f,
-                cx - s * 0.028f, cy + sign * s * 0.035f,
-                cx - s * 0.046f, cy + sign * s * 0.045f
-            )
-            moveTo(cx, cy - sign * s * 0.010f)
-            cubicTo(
-                cx + s * 0.020f, cy + sign * s * 0.010f,
-                cx + s * 0.028f, cy + sign * s * 0.035f,
-                cx + s * 0.046f, cy + sign * s * 0.045f
-            )
-        }
-        canvas.drawPath(p, gold)
-        canvas.drawCircle(cx, cy, s * 0.022f, antiqueGold)
-        canvas.drawCircle(cx, cy, s * 0.011f, gold)
+        drawBulbs(canvas, min(width, height).toFloat())
     }
 
     private fun drawBulbs(canvas: Canvas, s: Float) {
-        val positions = bulbPositions()
-        val radius = s * 0.024f
-
-        positions.forEachIndexed { index, p ->
+        val radius = s * 0.0185f
+        bulbPositions.forEachIndexed { index, p ->
             val color = colorForBulb(index)
             val alphaScale = when {
-                !animationsEnabled -> 0.52f
+                !animationsEnabled -> 0.50f
                 mode == CarnivalLightMode.PAUSED -> 0.42f
                 else -> 1.0f
             }
             val cx = p.first * width
             val cy = p.second * height
 
-            glowPaint.color = withAlpha(color, (78 * alphaScale).toInt())
-            canvas.drawCircle(cx, cy, radius * 2.05f, glowPaint)
+            // The extracted frame contains its original warm bulb halo.
+            // These layers recolor the glass/socket while allowing that halo
+            // to remain visible around the animated bulb.
+            glowPaint.color = withAlpha(color, (105 * alphaScale).toInt())
+            canvas.drawCircle(cx, cy, radius * 1.85f, glowPaint)
 
-            canvas.drawCircle(cx, cy, radius * 1.24f, socketOuter)
-            canvas.drawCircle(cx, cy, radius * 1.08f, socketInner)
+            canvas.drawCircle(cx, cy, radius * 1.12f, socketOuter)
+            canvas.drawCircle(cx, cy, radius * 0.98f, socketInner)
 
             bulbPaint.color = withAlpha(color, (255 * alphaScale).toInt())
-            canvas.drawCircle(cx, cy, radius * 0.88f, bulbPaint)
+            canvas.drawCircle(cx, cy, radius * 0.82f, bulbPaint)
 
-            // Warm luminous center and glass highlight.
-            glowPaint.color = withAlpha(Color.WHITE, (85 * alphaScale).toInt())
-            canvas.drawCircle(cx, cy, radius * 0.55f, glowPaint)
+            glowPaint.color = withAlpha(Color.WHITE, (78 * alphaScale).toInt())
+            canvas.drawCircle(cx, cy, radius * 0.48f, glowPaint)
 
-            highlightPaint.alpha = (230 * alphaScale).toInt().coerceIn(0, 255)
+            highlightPaint.alpha = (225 * alphaScale).toInt().coerceIn(0, 255)
             canvas.drawCircle(
-                cx - radius * 0.28f,
-                cy - radius * 0.31f,
-                radius * 0.18f,
+                cx - radius * 0.23f,
+                cy - radius * 0.25f,
+                radius * 0.16f,
                 highlightPaint
             )
         }
@@ -412,20 +269,6 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         CarnivalLightMode.PAUSED -> Long.MAX_VALUE
     }
 
-    private fun bulbPositions(): List<Pair<Float, Float>> {
-        // Matches the approved mockup: six large bulbs across the top and
-        // bottom, five down each side.
-        val topXs = floatArrayOf(0.060f, 0.250f, 0.415f, 0.570f, 0.745f, 0.940f)
-        val sideYs = floatArrayOf(0.205f, 0.360f, 0.515f, 0.665f, 0.820f)
-
-        val out = ArrayList<Pair<Float, Float>>(22)
-        topXs.forEach { x -> out += x to 0.060f }
-        sideYs.forEach { y -> out += 0.945f to y }
-        topXs.reversedArray().forEach { x -> out += x to 0.940f }
-        sideYs.reversedArray().forEach { y -> out += 0.055f to y }
-        return out
-    }
-
     private fun withAlpha(color: Int, alpha: Int): Int =
         Color.argb(
             alpha.coerceIn(0, 255),
@@ -433,4 +276,37 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
             Color.green(color),
             Color.blue(color)
         )
+
+    companion object {
+        // Normalized centers measured from the approved 512 x 512 frame asset.
+        // Order runs clockwise so the existing chase animation travels around
+        // the physical bulb sockets exactly.
+        private val bulbPositions = listOf(
+            33.96f / 512f to 41.92f / 512f,
+            128.14f / 512f to 40.59f / 512f,
+            213.46f / 512f to 36.24f / 512f,
+            290.82f / 512f to 36.28f / 512f,
+            379.12f / 512f to 39.77f / 512f,
+            477.23f / 512f to 40.85f / 512f,
+
+            482.49f / 512f to 109.90f / 512f,
+            483.78f / 512f to 182.51f / 512f,
+            483.17f / 512f to 261.58f / 512f,
+            483.63f / 512f to 333.73f / 512f,
+            483.22f / 512f to 414.65f / 512f,
+
+            479.29f / 512f to 467.10f / 512f,
+            378.50f / 512f to 466.11f / 512f,
+            294.23f / 512f to 467.37f / 512f,
+            210.48f / 512f to 466.71f / 512f,
+            128.89f / 512f to 466.19f / 512f,
+            30.78f / 512f to 467.17f / 512f,
+
+            28.02f / 512f to 414.99f / 512f,
+            27.25f / 512f to 332.94f / 512f,
+            27.06f / 512f to 260.22f / 512f,
+            26.99f / 512f to 181.90f / 512f,
+            28.49f / 512f to 110.08f / 512f
+        )
+    }
 }
