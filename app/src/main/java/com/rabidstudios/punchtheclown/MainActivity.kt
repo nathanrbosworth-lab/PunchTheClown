@@ -25,6 +25,7 @@ import android.widget.Space
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -67,6 +68,8 @@ class MainActivity : Activity() {
     private lateinit var localStats: LocalStatsRepository
     private lateinit var leaderboardGateway: LeaderboardGateway
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
+    private var playGamesManualSignInAttempted = false
+    private var playGamesConnectedNoticeShown = false
 
     private val cream = Color.rgb(247, 231, 198)
     private val gold = Color.rgb(232, 182, 75)
@@ -95,11 +98,6 @@ class MainActivity : Activity() {
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
-        leaderboardGateway.refreshAuthentication { state ->
-            if (state == LeaderboardAuthState.AUTHENTICATED) {
-                flushPendingOnlineScores()
-            }
-        }
         showSplash()
     }
 
@@ -128,11 +126,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (::leaderboardGateway.isInitialized) {
-            leaderboardGateway.refreshAuthentication { state ->
-                if (state == LeaderboardAuthState.AUTHENTICATED) {
-                    flushPendingOnlineScores()
-                }
-            }
+            refreshPlayGamesAuthentication()
         }
         if (pausedByLifecycle && inGame && !gameFinished) {
             pausedByLifecycle = false
@@ -1324,6 +1318,58 @@ class MainActivity : Activity() {
         gravity = Gravity.CENTER
         setPadding(0, dp(6), 0, dp(6))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+
+    private fun refreshPlayGamesAuthentication() {
+        leaderboardGateway.refreshAuthentication { state ->
+            when (state) {
+                LeaderboardAuthState.AUTHENTICATED -> {
+                    if (!playGamesConnectedNoticeShown) {
+                        playGamesConnectedNoticeShown = true
+                        Toast.makeText(
+                            this,
+                            "Google Play Games connected",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    flushPendingOnlineScores()
+                }
+
+                LeaderboardAuthState.SIGNED_OUT -> {
+                    if (!playGamesManualSignInAttempted) {
+                        playGamesManualSignInAttempted = true
+                        leaderboardGateway.requestSignIn { signInState ->
+                            if (signInState == LeaderboardAuthState.AUTHENTICATED) {
+                                playGamesConnectedNoticeShown = true
+                                Toast.makeText(
+                                    this,
+                                    "Google Play Games connected",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                flushPendingOnlineScores()
+                            } else {
+                                Toast.makeText(
+                                    this,
+                                    "Google Play Games sign-in not completed",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                }
+
+                LeaderboardAuthState.ERROR -> {
+                    Toast.makeText(
+                        this,
+                        "Google Play Games is unavailable",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                LeaderboardAuthState.UNCONFIGURED,
+                LeaderboardAuthState.CHECKING -> Unit
+            }
+        }
     }
 
     private fun queueAndSubmitOnlineScore(result: GameResult) {
