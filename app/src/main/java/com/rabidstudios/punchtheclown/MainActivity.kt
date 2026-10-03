@@ -95,7 +95,11 @@ class MainActivity : Activity() {
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
-        leaderboardGateway.refreshAuthentication()
+        leaderboardGateway.refreshAuthentication { state ->
+            if (state == LeaderboardAuthState.AUTHENTICATED) {
+                flushPendingOnlineScores()
+            }
+        }
         showSplash()
     }
 
@@ -124,7 +128,11 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (::leaderboardGateway.isInitialized) {
-            leaderboardGateway.refreshAuthentication()
+            leaderboardGateway.refreshAuthentication { state ->
+                if (state == LeaderboardAuthState.AUTHENTICATED) {
+                    flushPendingOnlineScores()
+                }
+            }
         }
         if (pausedByLifecycle && inGame && !gameFinished) {
             pausedByLifecycle = false
@@ -949,6 +957,7 @@ class MainActivity : Activity() {
             completedRounds = completedSequences
         )
         val newHigh = localStats.record(result)
+        queueAndSubmitOnlineScore(result)
 
         if (newHigh) {
             haptic(180L, 165)
@@ -1195,6 +1204,7 @@ class MainActivity : Activity() {
             misses = beaningBoard.misses
         )
         val newHigh = localStats.record(result)
+        queueAndSubmitOnlineScore(result)
 
         showBeaningResults(newHigh)
     }
@@ -1314,6 +1324,33 @@ class MainActivity : Activity() {
         gravity = Gravity.CENTER
         setPadding(0, dp(6), 0, dp(6))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+
+    private fun queueAndSubmitOnlineScore(result: GameResult) {
+        if (result.score <= 0L) return
+
+        localStats.queuePendingOnlineScore(result.mode, result.score)
+
+        if (leaderboardGateway.authState == LeaderboardAuthState.AUTHENTICATED) {
+            submitPendingOnlineScore(result.mode)
+        }
+    }
+
+    private fun flushPendingOnlineScores() {
+        if (leaderboardGateway.authState != LeaderboardAuthState.AUTHENTICATED) return
+        submitPendingOnlineScore(GameMode.PUNCH)
+        submitPendingOnlineScore(GameMode.BEANING)
+    }
+
+    private fun submitPendingOnlineScore(mode: GameMode) {
+        val pendingScore = localStats.pendingOnlineScore(mode)
+        if (pendingScore <= 0L) return
+
+        leaderboardGateway.submitScore(mode, pendingScore) { success ->
+            if (success) {
+                localStats.clearPendingOnlineScore(mode, pendingScore)
+            }
+        }
     }
 
     private fun haptic(durationMs: Long, amplitude: Int) {

@@ -19,4 +19,10 @@ interface LeaderboardGateway {
     fun requestSignIn(
         onResult: (LeaderboardAuthState) -> Unit = {}
     )
+
+    fun submitScore(
+        mode: GameMode,
+        score: Long,
+        onResult: (Boolean) -> Unit = {}
+    )
 }

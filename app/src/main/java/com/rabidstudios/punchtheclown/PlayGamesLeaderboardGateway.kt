@@ -75,6 +75,33 @@ class PlayGamesLeaderboardGateway(
             }
     }
 
+    override fun submitScore(
+        mode: GameMode,
+        score: Long,
+        onResult: (Boolean) -> Unit
+    ) {
+        if (!isConfigured || authState != LeaderboardAuthState.AUTHENTICATED || score <= 0L) {
+            onResult(false)
+            return
+        }
+
+        val leaderboardId = when (mode) {
+            GameMode.PUNCH -> activity.getString(R.string.leaderboard_punch_the_clown_high_score)
+            GameMode.BEANING -> activity.getString(R.string.leaderboard_beaning_the_clowns__high_score)
+        }
+
+        val client = runCatching { PlayGames.getLeaderboardsClient(activity) }
+            .getOrElse {
+                onResult(false)
+                return
+            }
+
+        client.submitScoreImmediate(leaderboardId, score)
+            .addOnCompleteListener { task ->
+                onResult(task.isSuccessful)
+            }
+    }
+
     private fun publish(
         state: LeaderboardAuthState,
         callback: (LeaderboardAuthState) -> Unit
