@@ -1378,25 +1378,55 @@ class MainActivity : Activity() {
         localStats.queuePendingOnlineScore(result.mode, result.score)
 
         if (leaderboardGateway.authState == LeaderboardAuthState.AUTHENTICATED) {
-            submitPendingOnlineScore(result.mode)
+            submitPendingOnlineScore(result.mode, showFeedback = true)
+        } else {
+            Toast.makeText(
+                this,
+                "${leaderboardLabel(result.mode)} score %,d saved for online retry"
+                    .format(result.score),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     private fun flushPendingOnlineScores() {
         if (leaderboardGateway.authState != LeaderboardAuthState.AUTHENTICATED) return
-        submitPendingOnlineScore(GameMode.PUNCH)
-        submitPendingOnlineScore(GameMode.BEANING)
+        submitPendingOnlineScore(GameMode.PUNCH, showFeedback = false)
+        submitPendingOnlineScore(GameMode.BEANING, showFeedback = false)
     }
 
-    private fun submitPendingOnlineScore(mode: GameMode) {
+    private fun submitPendingOnlineScore(
+        mode: GameMode,
+        showFeedback: Boolean
+    ) {
         val pendingScore = localStats.pendingOnlineScore(mode)
         if (pendingScore <= 0L) return
 
         leaderboardGateway.submitScore(mode, pendingScore) { success ->
             if (success) {
                 localStats.clearPendingOnlineScore(mode, pendingScore)
+                if (showFeedback) {
+                    Toast.makeText(
+                        this,
+                        "${leaderboardLabel(mode)} leaderboard score submitted: %,d"
+                            .format(pendingScore),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } else if (showFeedback) {
+                Toast.makeText(
+                    this,
+                    "${leaderboardLabel(mode)} leaderboard submission failed — %,d saved for retry"
+                        .format(pendingScore),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
+    }
+
+    private fun leaderboardLabel(mode: GameMode): String = when (mode) {
+        GameMode.PUNCH -> "Punch"
+        GameMode.BEANING -> "Beaning"
     }
 
     private fun haptic(durationMs: Long, amplitude: Int) {
