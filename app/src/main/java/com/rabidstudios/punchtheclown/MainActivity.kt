@@ -696,17 +696,11 @@ class MainActivity : Activity() {
 
         content.addView(space(12))
         content.addView(
-            leaderboardNavButton("REFRESH") {
+            leaderboardRefreshSign {
                 showOnlineLeaderboards(mode, forceReload = true)
             }
         )
-        content.addView(space(6))
-        content.addView(
-            leaderboardNavButton("BACK TO STATS & SETTINGS") {
-                showStatsSettings()
-            }
-        )
-        content.addView(space(6))
+        content.addView(space(8))
         content.addView(button("Back to Game Select") { showMenu() })
 
         val scroll = ScrollView(this).apply {
@@ -895,6 +889,29 @@ class MainActivity : Activity() {
             cornerRadius = dp(8).toFloat()
         }
         setOnClickListener { onClick() }
+    }
+
+    private fun leaderboardRefreshSign(
+        onClick: () -> Unit
+    ): BeaningCarnivalSignView {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
+        val signHeight = (signWidth * 0.24f).toInt()
+        return BeaningCarnivalSignView(
+            this,
+            "REFRESH",
+            BeaningCarnivalSignView.Scheme.RED,
+            mountedSolidly = true,
+            bothEndsPointed = true,
+            weathered = true
+        ).apply {
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Refresh online leaderboard"
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
     }
 
     private fun leaderboardNavButton(
