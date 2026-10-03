@@ -627,9 +627,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(18), dp(18), dp(24))
         }
 
-        content.addView(title("ONLINE LEADERBOARDS", 29f))
-        content.addView(space(8))
-        content.addView(subtitle("ALL-TIME PUBLIC SCORES", 15f))
+        content.addView(leaderboardMarqueeTitle())
         content.addView(space(10))
 
         val modeRow = LinearLayout(this).apply {
@@ -818,6 +816,96 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun leaderboardMarqueeTitle(): FrameLayout {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.90f).toInt()
+        val signHeight = (signWidth * 0.30f).toInt()
+
+        return FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(113, 28, 30))
+                setStroke(dp(5), Color.rgb(94, 49, 23))
+                cornerRadius = dp(14).toFloat()
+            }
+
+            val inner = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(36), dp(15), dp(36), dp(15))
+                addView(TextView(this@MainActivity).apply {
+                    text = "ONLINE LEADERBOARDS"
+                    textSize = 25f
+                    setTextColor(cream)
+                    gravity = Gravity.CENTER
+                    setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+                    setShadowLayer(dp(3).toFloat(), 0f, dp(2).toFloat(), Color.rgb(56, 20, 16))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "ALL-TIME PUBLIC SCORES"
+                    textSize = 12f
+                    setTextColor(gold)
+                    gravity = Gravity.CENTER
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                })
+            }
+            addView(
+                inner,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            addView(
+                object : View(this@MainActivity) {
+                    private val bulbPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    private val socketPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(75, 39, 19)
+                    }
+
+                    override fun onDraw(canvas: android.graphics.Canvas) {
+                        super.onDraw(canvas)
+                        val w = width.toFloat()
+                        val h = height.toFloat()
+                        val r = minOf(w, h) * 0.032f
+                        val topY = h * 0.10f
+                        val bottomY = h * 0.90f
+                        val leftX = w * 0.035f
+                        val rightX = w * 0.965f
+
+                        fun bulb(x: Float, y: Float, warm: Boolean) {
+                            canvas.drawCircle(x, y, r * 1.35f, socketPaint)
+                            bulbPaint.color = if (warm) Color.rgb(255, 184, 55) else Color.rgb(255, 241, 190)
+                            canvas.drawCircle(x, y, r, bulbPaint)
+                            bulbPaint.color = Color.argb(185, 255, 255, 255)
+                            canvas.drawCircle(x - r * 0.24f, y - r * 0.24f, r * 0.25f, bulbPaint)
+                        }
+
+                        val across = 9
+                        for (i in 0 until across) {
+                            val x = w * (0.08f + i * (0.84f / (across - 1)))
+                            bulb(x, topY, i % 2 == 0)
+                            bulb(x, bottomY, i % 2 != 0)
+                        }
+                        bulb(leftX, h * 0.33f, true)
+                        bulb(leftX, h * 0.67f, false)
+                        bulb(rightX, h * 0.33f, false)
+                        bulb(rightX, h * 0.67f, true)
+                    }
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = "Online Leaderboards. All-time public scores."
+            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+    }
+
     private fun leaderboardSectionTitle(text: String): TextView = TextView(this).apply {
         this.text = text
         textSize = 20f
@@ -893,21 +981,67 @@ class MainActivity : Activity() {
 
     private fun leaderboardRefreshSign(
         onClick: () -> Unit
-    ): BeaningCarnivalSignView {
+    ): FrameLayout {
+        val cellWidth = woodSignSheet.width / 2
+        val cellHeight = woodSignSheet.height / 3
+
+        // Reuse the exact approved wooden-sign artwork used elsewhere in the
+        // game instead of the newer red drawn carnival sign. MAIN MENU is used
+        // only as the texture/shape source; its original label is covered by a
+        // small weathered wood plaque carrying the Refresh label.
+        val signBitmap = Bitmap.createBitmap(
+            woodSignSheet,
+            0,
+            2 * cellHeight,
+            cellWidth,
+            cellHeight
+        )
+
         val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
-        val signHeight = (signWidth * 0.24f).toInt()
-        return BeaningCarnivalSignView(
-            this,
-            "REFRESH",
-            BeaningCarnivalSignView.Scheme.RED,
-            mountedSolidly = true,
-            bothEndsPointed = true,
-            weathered = true
-        ).apply {
+        val signHeight = (signWidth * cellHeight.toFloat() / cellWidth.toFloat()).toInt()
+
+        return FrameLayout(this).apply {
             isClickable = true
             isFocusable = true
             contentDescription = "Refresh online leaderboard"
             setOnClickListener { onClick() }
+
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageBitmap(signBitmap)
+                    scaleType = ImageView.ScaleType.FIT_XY
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            addView(
+                TextView(this@MainActivity).apply {
+                    text = "REFRESH"
+                    textSize = 20f
+                    setTextColor(cream)
+                    gravity = Gravity.CENTER
+                    setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+                    setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), Color.rgb(49, 24, 13))
+                    background = GradientDrawable().apply {
+                        setColor(Color.argb(242, 78, 45, 27))
+                        setStroke(dp(1), Color.argb(150, 154, 104, 54))
+                        cornerRadius = dp(3).toFloat()
+                    }
+                    setPadding(dp(20), dp(4), dp(20), dp(4))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                },
+                FrameLayout.LayoutParams(
+                    (signWidth * 0.54f).toInt(),
+                    (signHeight * 0.40f).toInt()
+                ).apply {
+                    gravity = Gravity.CENTER
+                }
+            )
+
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
