@@ -66,6 +66,7 @@ class MainActivity : Activity() {
     private lateinit var prefs: android.content.SharedPreferences
     private lateinit var localStats: LocalStatsRepository
     private lateinit var leaderboardGateway: LeaderboardGateway
+    private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
 
     private val cream = Color.rgb(247, 231, 198)
     private val gold = Color.rgb(232, 182, 75)
@@ -110,7 +111,10 @@ class MainActivity : Activity() {
             sessionToken++
             handler.removeCallbacksAndMessages(null)
             when (activeMode) {
-                ActiveGameMode.PUNCH -> if (::board.isInitialized) board.inputEnabled = false
+                ActiveGameMode.PUNCH -> {
+                    if (::board.isInitialized) board.inputEnabled = false
+                    punchMarqueeFrame?.setMode(CarnivalLightMode.PAUSED)
+                }
                 ActiveGameMode.BEANING -> if (::beaningBoard.isInitialized) beaningBoard.pauseForInterruption()
                 ActiveGameMode.NONE -> Unit
             }
@@ -340,6 +344,37 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun framedPunchBoard(
+        boardView: ClownBoardView,
+        mode: CarnivalLightMode
+    ): FrameLayout {
+        val frame = CarnivalMarqueeFrameView(this).apply {
+            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
+            setMode(mode)
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        punchMarqueeFrame = frame
+
+        return FrameLayout(this).apply {
+            addView(
+                boardView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+            addView(
+                frame,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }
+    }
+
     private fun showSplash() {
         inGame = false
         gameFinished = false
@@ -528,6 +563,24 @@ class MainActivity : Activity() {
             )
         )
 
+        val carnivalLightsSwitch = Switch(this).apply {
+            text = "Carnival Lights"
+            textSize = 18f
+            setTextColor(cream)
+            isChecked = prefs.getBoolean("carnival_lights_enabled", true)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("carnival_lights_enabled", checked).apply()
+                punchMarqueeFrame?.animationsEnabled = checked
+            }
+        }
+        r.addView(
+            carnivalLightsSwitch,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         r.addView(space(12))
         r.addView(button("Back to Game Select") { showMenu() })
         r.addView(space(20))
@@ -602,8 +655,9 @@ class MainActivity : Activity() {
         val preview = ClownBoardView(this, currentClown, showGrid = false).apply {
             inputEnabled = false
         }
+        val framedPreview = framedPunchBoard(preview, CarnivalLightMode.READY)
         r.addView(
-            preview,
+            framedPreview,
             LinearLayout.LayoutParams(
                 gameBoardSizePx,
                 gameBoardSizePx
@@ -611,10 +665,10 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         )
-        preview.post {
-            // Remember the exact on-screen board position used by the ready
-            // screen so gameplay can keep the board perfectly stationary.
-            readyBoardTopPx = preview.top
+        framedPreview.post {
+            // Remember the exact on-screen framed-board position used by the
+            // ready screen so gameplay keeps both board and marquee stationary.
+            readyBoardTopPx = framedPreview.top
         }
 
         r.addView(space(8))
@@ -693,8 +747,9 @@ class MainActivity : Activity() {
             inputEnabled = false
             onCellPressed = { cell -> onPlayerTap(cell) }
         }
+        val framedBoard = framedPunchBoard(board, CarnivalLightMode.WATCH)
         playStack.addView(
-            board,
+            framedBoard,
             LinearLayout.LayoutParams(
                 gameBoardSizePx,
                 gameBoardSizePx
@@ -762,7 +817,7 @@ class MainActivity : Activity() {
         )
 
         playStack.post {
-            val boardTopInRoot = playStack.top + board.top
+            val boardTopInRoot = playStack.top + framedBoard.top
             if (readyBoardTopPx > 0) {
                 playStack.translationY = (readyBoardTopPx - boardTopInRoot).toFloat()
             }
@@ -804,6 +859,7 @@ class MainActivity : Activity() {
         board.inputEnabled = false
         board.clearMarks()
         statusText.text = "WATCH"
+        punchMarqueeFrame?.setMode(CarnivalLightMode.WATCH)
 
         val signal = max(200L, 650L - (level - 1) * 25L)
         val gap = max(75L, 250L - (level - 1) * 8L)
@@ -829,6 +885,7 @@ class MainActivity : Activity() {
             playerIndex = 0
             board.inputEnabled = true
             statusText.text = "YOUR TURN"
+            punchMarqueeFrame?.setMode(CarnivalLightMode.PLAYER_TURN)
         }, at)
     }
 
@@ -846,6 +903,7 @@ class MainActivity : Activity() {
             sessionToken++
             handler.removeCallbacksAndMessages(null)
             haptic(110L, 210)
+            punchMarqueeFrame?.flashWrong()
             val willBeNewHigh = score > localStats.punchStats().highScore
             audio.playWrongThenWin(willBeNewHigh)
 
@@ -858,6 +916,7 @@ class MainActivity : Activity() {
 
         audio.playGrid(cell)
         haptic(28L, 85)
+        punchMarqueeFrame?.flashCorrect()
         score += 100L
         correctInputs++
         playerIndex++
@@ -871,6 +930,7 @@ class MainActivity : Activity() {
             updateHud()
             statusText.text = "NICE!"
             haptic(42L, 105)
+            punchMarqueeFrame?.celebrateSequence()
 
             val token = sessionToken
             handler.postDelayed({
