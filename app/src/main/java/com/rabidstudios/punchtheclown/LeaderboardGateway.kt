@@ -8,6 +8,22 @@ enum class LeaderboardAuthState {
     ERROR
 }
 
+data class RankedScore(
+    val rank: Long,
+    val displayRank: String,
+    val displayName: String,
+    val score: Long,
+    val formattedScore: String,
+    val isCurrentPlayer: Boolean
+)
+
+data class LeaderboardSnapshot(
+    val mode: GameMode,
+    val top50: List<RankedScore>,
+    val playerScore: RankedScore?,
+    val nearbyScores: List<RankedScore>
+)
+
 interface LeaderboardGateway {
     val isConfigured: Boolean
     val authState: LeaderboardAuthState
@@ -24,5 +40,11 @@ interface LeaderboardGateway {
         mode: GameMode,
         score: Long,
         onResult: (Boolean) -> Unit = {}
+    )
+
+    fun loadSnapshot(
+        mode: GameMode,
+        forceReload: Boolean = false,
+        onResult: (LeaderboardSnapshot?, Throwable?) -> Unit
     )
 }
