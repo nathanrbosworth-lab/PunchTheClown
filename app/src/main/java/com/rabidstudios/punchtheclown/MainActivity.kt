@@ -584,6 +584,12 @@ class MainActivity : Activity() {
         )
 
         r.addView(space(12))
+        r.addView(
+            leaderboardNavButton("ONLINE LEADERBOARDS") {
+                showOnlineLeaderboards(GameMode.PUNCH, forceReload = true)
+            }
+        )
+        r.addView(space(8))
         r.addView(button("Back to Game Select") { showMenu() })
         r.addView(space(20))
 
@@ -598,6 +604,310 @@ class MainActivity : Activity() {
             )
         }
         setContentView(withCarnivalBackground(scroll))
+    }
+
+    private fun showOnlineLeaderboards(
+        mode: GameMode,
+        forceReload: Boolean = false
+    ) {
+        activeMode = ActiveGameMode.NONE
+        inGame = false
+        gameFinished = false
+        audio.stopEventSequence()
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(18), dp(18), dp(18), dp(24))
+        }
+
+        content.addView(title("ONLINE LEADERBOARDS", 29f))
+        content.addView(space(8))
+        content.addView(subtitle("ALL-TIME PUBLIC SCORES", 15f))
+        content.addView(space(10))
+
+        val modeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        modeRow.addView(
+            leaderboardModeButton(
+                label = "PUNCH",
+                selected = mode == GameMode.PUNCH
+            ) {
+                showOnlineLeaderboards(GameMode.PUNCH, forceReload = true)
+            },
+            LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+                marginEnd = dp(4)
+            }
+        )
+        modeRow.addView(
+            leaderboardModeButton(
+                label = "BEANING",
+                selected = mode == GameMode.BEANING
+            ) {
+                showOnlineLeaderboards(GameMode.BEANING, forceReload = true)
+            },
+            LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+                marginStart = dp(4)
+            }
+        )
+        content.addView(
+            modeRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        content.addView(space(12))
+        val status = TextView(this).apply {
+            text = "LOADING..."
+            textSize = 16f
+            setTextColor(gold)
+            gravity = Gravity.CENTER
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        content.addView(
+            status,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val results = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+        content.addView(
+            results,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        content.addView(space(12))
+        content.addView(
+            leaderboardNavButton("REFRESH") {
+                showOnlineLeaderboards(mode, forceReload = true)
+            }
+        )
+        content.addView(space(6))
+        content.addView(
+            leaderboardNavButton("BACK TO STATS & SETTINGS") {
+                showStatsSettings()
+            }
+        )
+        content.addView(space(6))
+        content.addView(button("Back to Game Select") { showMenu() })
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            addView(
+                content,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
+        setContentView(withCarnivalBackground(scroll))
+
+        fun loadWhenAuthenticated() {
+            status.text = "LOADING..."
+            results.removeAllViews()
+            leaderboardGateway.loadSnapshot(
+                mode = mode,
+                forceReload = forceReload
+            ) { snapshot, error ->
+                runOnUiThread {
+                    if (snapshot == null) {
+                        status.text = "COULDN'T LOAD LEADERBOARD"
+                        results.removeAllViews()
+                        results.addView(
+                            leaderboardMessage(
+                                error?.message ?: "Play Games returned no leaderboard data."
+                            )
+                        )
+                    } else {
+                        status.text = "CONNECTED TO GOOGLE PLAY GAMES"
+                        renderLeaderboardSnapshot(results, snapshot)
+                    }
+                }
+            }
+        }
+
+        when (leaderboardGateway.authState) {
+            LeaderboardAuthState.AUTHENTICATED -> loadWhenAuthenticated()
+
+            LeaderboardAuthState.UNCONFIGURED -> {
+                status.text = "PLAY GAMES NOT CONFIGURED"
+                results.addView(
+                    leaderboardMessage("Online leaderboards are not configured in this build.")
+                )
+            }
+
+            else -> {
+                status.text = "SIGNING IN TO GOOGLE PLAY GAMES..."
+                leaderboardGateway.requestSignIn { state ->
+                    runOnUiThread {
+                        if (state == LeaderboardAuthState.AUTHENTICATED) {
+                            loadWhenAuthenticated()
+                        } else {
+                            status.text = "SIGN-IN REQUIRED"
+                            results.removeAllViews()
+                            results.addView(
+                                leaderboardMessage(
+                                    "Sign in to Google Play Games to view online rankings."
+                                )
+                            )
+                            results.addView(space(8))
+                            results.addView(
+                                leaderboardNavButton("SIGN IN TO PLAY GAMES") {
+                                    showOnlineLeaderboards(mode, forceReload = true)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderLeaderboardSnapshot(
+        container: LinearLayout,
+        snapshot: LeaderboardSnapshot
+    ) {
+        container.removeAllViews()
+
+        container.addView(space(12))
+        container.addView(leaderboardSectionTitle("YOUR RANK"))
+        val player = snapshot.playerScore
+        if (player == null) {
+            container.addView(
+                leaderboardMessage("No online score submitted yet.")
+            )
+        } else {
+            container.addView(leaderboardScoreRow(player))
+        }
+
+        container.addView(space(16))
+        container.addView(leaderboardSectionTitle("TOP 50"))
+        if (snapshot.top50.isEmpty()) {
+            container.addView(
+                leaderboardMessage("No public scores are available yet.")
+            )
+        } else {
+            snapshot.top50.forEach { score ->
+                container.addView(leaderboardScoreRow(score))
+            }
+        }
+
+        container.addView(space(16))
+        container.addView(leaderboardSectionTitle("AROUND YOU"))
+        if (snapshot.nearbyScores.isEmpty()) {
+            container.addView(
+                leaderboardMessage("No nearby rankings are available yet.")
+            )
+        } else {
+            snapshot.nearbyScores.forEach { score ->
+                container.addView(leaderboardScoreRow(score))
+            }
+        }
+    }
+
+    private fun leaderboardSectionTitle(text: String): TextView = TextView(this).apply {
+        this.text = text
+        textSize = 20f
+        setTextColor(gold)
+        gravity = Gravity.CENTER
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        setPadding(0, dp(5), 0, dp(5))
+    }
+
+    private fun leaderboardMessage(text: String): TextView = TextView(this).apply {
+        this.text = text
+        textSize = 16f
+        setTextColor(cream)
+        gravity = Gravity.CENTER
+        setPadding(dp(6), dp(8), dp(6), dp(8))
+    }
+
+    private fun leaderboardScoreRow(score: RankedScore): TextView = TextView(this).apply {
+        val rankText = score.displayRank.ifBlank {
+            if (score.rank > 0L) "#${score.rank}" else "—"
+        }
+        text = "$rankText   ${score.displayName}   ${score.formattedScore}"
+        textSize = if (score.isCurrentPlayer) 18f else 16f
+        setTextColor(if (score.isCurrentPlayer) gold else cream)
+        gravity = Gravity.CENTER_VERTICAL
+        setTypeface(
+            typeface,
+            if (score.isCurrentPlayer) {
+                android.graphics.Typeface.BOLD
+            } else {
+                android.graphics.Typeface.NORMAL
+            }
+        )
+        setPadding(dp(8), dp(7), dp(8), dp(7))
+        background = GradientDrawable().apply {
+            setColor(
+                if (score.isCurrentPlayer) {
+                    Color.argb(190, 92, 51, 25)
+                } else {
+                    Color.argb(135, 37, 24, 18)
+                }
+            )
+            setStroke(
+                dp(1),
+                if (score.isCurrentPlayer) gold else Color.argb(150, 232, 182, 75)
+            )
+            cornerRadius = dp(6).toFloat()
+        }
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            topMargin = dp(3)
+        }
+    }
+
+    private fun leaderboardModeButton(
+        label: String,
+        selected: Boolean,
+        onClick: () -> Unit
+    ): Button = Button(this).apply {
+        text = label
+        textSize = 16f
+        setTextColor(if (selected) dark else cream)
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        background = GradientDrawable().apply {
+            setColor(if (selected) gold else Color.rgb(92, 51, 25))
+            setStroke(dp(2), gold)
+            cornerRadius = dp(8).toFloat()
+        }
+        setOnClickListener { onClick() }
+    }
+
+    private fun leaderboardNavButton(
+        label: String,
+        onClick: () -> Unit
+    ): Button = Button(this).apply {
+        text = label
+        textSize = 16f
+        setTextColor(cream)
+        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        background = beaningWoodBackground(primary = true)
+        setOnClickListener { onClick() }
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(54)
+        ).apply {
+            leftMargin = dp(18)
+            rightMargin = dp(18)
+        }
     }
 
     private fun statsSectionSign(label: String): BeaningCarnivalSignView {
