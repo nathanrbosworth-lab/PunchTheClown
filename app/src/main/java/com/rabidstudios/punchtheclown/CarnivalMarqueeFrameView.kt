@@ -288,9 +288,11 @@ class CarnivalMarqueeFrameView(context: Context) : View(context) {
         )
 
     companion object {
-        // 6% vertical stretch: approximately 3% beyond the board at both the
-        // top and bottom. This covers the board's cream strips while keeping
-        // width and gameplay coordinates untouched.
+        // APPROVED / LOCKED 2026-10-02:
+        // Do not change these frame proportions, ornate frame asset, bulb
+        // socket positions, or approved light behavior without explicit user
+        // approval. 6% vertical stretch = ~3% beyond the 900x900 board at the
+        // top and bottom; board width and gameplay coordinates stay untouched.
         private const val FRAME_VERTICAL_SCALE = 1.06f
         private const val FRAME_VERTICAL_OVERHANG = 0.03f
 
