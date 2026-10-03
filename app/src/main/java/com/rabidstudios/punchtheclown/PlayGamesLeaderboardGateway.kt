@@ -7,16 +7,16 @@ import com.google.android.gms.games.PlayGames
  * Google Play Games Services v2 authentication boundary.
  *
  * The SDK's PlayGamesInitProvider performs normal startup initialization.
- * Until Play Console resources replace the placeholder project ID, this class
- * deliberately avoids creating Play Games clients so M3 gameplay stays fully
- * usable in development builds.
+ * Play Console resources are now configured for the Punch the Clown project.
+ * Authentication remains isolated behind this gateway so gameplay continues
+ * to work even when Play Games Services is unavailable.
  */
 class PlayGamesLeaderboardGateway(
     private val activity: Activity
 ) : LeaderboardGateway {
 
     override val isConfigured: Boolean =
-        activity.getString(R.string.game_services_project_id).trim() != UNCONFIGURED_PROJECT_ID
+        activity.getString(R.string.app_id).trim() != UNCONFIGURED_PROJECT_ID
 
     @Volatile
     override var authState: LeaderboardAuthState =
