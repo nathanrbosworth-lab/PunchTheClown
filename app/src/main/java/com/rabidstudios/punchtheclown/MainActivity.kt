@@ -443,9 +443,16 @@ class MainActivity : Activity() {
             setOnClickListener { showStatsSettings() }
         }
 
+        val leaderboardBalloon = LeaderboardBalloonButton(this).apply {
+            setOnClickListener {
+                showOnlineLeaderboards(GameMode.PUNCH, forceReload = true)
+            }
+        }
+
         root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
         root.addView(beaningTheClownsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(statsSettingsSign, FrameLayout.LayoutParams(1, 1))
+        root.addView(leaderboardBalloon, FrameLayout.LayoutParams(1, 1))
         setContentView(root)
 
         root.post {
@@ -485,6 +492,11 @@ class MainActivity : Activity() {
             placeSign(punchTheClownSign, 0.488f, 0.431f, 0.968f, 0.579f)
             placeSign(beaningTheClownsSign, 0.490f, 0.585f, 0.965f, 0.719f)
             placeSign(statsSettingsSign, 0.495f, 0.720f, 0.951f, 0.842f)
+
+            // Standalone carnival balloon for online rankings. This occupies
+            // the unused upper-left of the approved Game Select artwork and
+            // does not alter the three painted guidepost hit regions.
+            placeSign(leaderboardBalloon, 0.035f, 0.055f, 0.300f, 0.235f)
         }
     }
 
@@ -584,12 +596,6 @@ class MainActivity : Activity() {
         )
 
         r.addView(space(12))
-        r.addView(
-            leaderboardNavButton("ONLINE LEADERBOARDS") {
-                showOnlineLeaderboards(GameMode.PUNCH, forceReload = true)
-            }
-        )
-        r.addView(space(8))
         r.addView(button("Back to Game Select") { showMenu() })
         r.addView(space(20))
 
