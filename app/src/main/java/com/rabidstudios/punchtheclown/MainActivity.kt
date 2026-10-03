@@ -74,9 +74,9 @@ class MainActivity : Activity() {
     private val wood = Color.rgb(54, 31, 22)
     private val dark = Color.rgb(27, 18, 16)
 
-    // Clown artwork is authored at 900 x 900 pixels. Keep both the ready preview
-    // and active play field at the same physical-pixel size.
-    private val gameBoardSizePx = 900
+    // Locked illustrated-art canvas and Punch play field. The clown subject is
+    // authored inside the centered 720 x 720 safe-art area (90 px margins).
+    private val gameBoardSizePx = PunchArtworkSpec.CANVAS_SIZE_PX
 
     // Approved six-button wooden sign sheet: 2 columns x 3 rows.
     // Apply the exact approved no-post pixel patch to the existing game asset.

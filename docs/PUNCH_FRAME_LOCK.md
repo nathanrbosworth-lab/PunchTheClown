@@ -21,3 +21,9 @@ The cream strips are part of the underlying game board. The approved taller fram
 Do not alter the frame artwork, frame proportions, bulb positions, bulb animation behavior, board size, or Punch touch geometry unless the user explicitly approves a new frame revision.
 
 The frozen M3 rollback points remain untouched.
+
+## Illustrated artwork safe area
+
+Illustrated clown composition is governed by `docs/PUNCH_ILLUSTRATED_ART_SPEC.md`.
+
+The locked frame does not move or resize for individual clown artwork. Each clown is authored on a 900 x 900 canvas with its critical subject contained inside the centered 720 x 720 safe-art area.

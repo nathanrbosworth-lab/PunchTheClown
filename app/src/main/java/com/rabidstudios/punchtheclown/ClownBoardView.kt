@@ -11,7 +11,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.min
 
 class ClownBoardView(
     context: Context,
@@ -45,7 +44,7 @@ class ClownBoardView(
         BitmapFactory.decodeResource(
             resources,
             clownResources[clownIndex.coerceIn(0, clownResources.lastIndex)]
-        )
+        ).also(PunchArtworkSpec::requireValidCanvas)
     }
 
     fun setHighlighted(cell: Int?) {
@@ -100,7 +99,11 @@ class ClownBoardView(
         paint.color = Color.rgb(31, 18, 15)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
-        val dst = fitCenterDestination(clownBitmap.width, clownBitmap.height)
+        // Illustrated Punch artwork is authored on the same 900 x 900
+        // coordinate system as the board. Draw the complete canvas directly;
+        // the clown itself is composed inside PunchArtworkSpec's centered
+        // 720 x 720 safe-art area.
+        val dst = RectF(0f, 0f, width.toFloat(), height.toFloat())
         canvas.drawBitmap(clownBitmap, null, dst, paint)
 
         if (showGrid) {
@@ -137,23 +140,4 @@ class ClownBoardView(
         canvas.drawRect(3f, 3f, width - 3f, height - 3f, stroke)
     }
 
-    private fun fitCenterDestination(sourceWidth: Int, sourceHeight: Int): RectF {
-        val viewW = width.toFloat()
-        val viewH = height.toFloat()
-        val scale = min(
-            viewW / sourceWidth.toFloat(),
-            viewH / sourceHeight.toFloat()
-        )
-        val drawW = sourceWidth * scale
-        val drawH = sourceHeight * scale
-        val left = (viewW - drawW) / 2f
-        val top = (viewH - drawH) / 2f
-
-        return RectF(
-            left,
-            top,
-            left + drawW,
-            top + drawH
-        )
-    }
 }

@@ -87,12 +87,19 @@ jobs:
       - name: Materialize one-octave-lower Punch board sounds
         run: bash scripts/lower-punch-grid-sounds.sh
 
+      - name: Verify illustrated Punch canvas dimensions
+        run: |
+          for n in $(seq -w 1 10); do
+            file="app/src/main/res/drawable-nodpi/clown_illustrated_${n}.webp"
+            dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$file")"
+            test "$dimensions" = "900x900"
+          done
       - name: Build current debug APK
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload current APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M4-alpha-0.4.4-current-main
+          name: PunchTheClown-M4-alpha-0.4.5-current-main
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
