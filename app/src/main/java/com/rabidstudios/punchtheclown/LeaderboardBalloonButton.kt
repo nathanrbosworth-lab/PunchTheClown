@@ -1,136 +1,120 @@
 package com.rabidstudios.punchtheclown
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.Context
-import android.graphics.Canvas
+import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import android.util.Base64
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.ImageButton
+import android.widget.ImageView
 
 /**
- * Carnival balloon control used to open the online leaderboard from Game Select.
- * It is intentionally self-contained so the approved Game Select artwork does
- * not need to be edited.
+ * Painted carnival balloon control used to open the online leaderboard from
+ * Game Select. The approved artwork is packaged as base64 in res/raw so the
+ * repository and CI remain text-safe while the runtime view displays the
+ * original transparent WebP.
  */
-class LeaderboardBalloonButton(context: Context) : View(context) {
+class LeaderboardBalloonButton(context: Context) : ImageButton(context) {
 
-    private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(184, 38, 46)
-        style = Paint.Style.FILL
-    }
-
-    private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(92, 255, 255, 255)
-        style = Paint.Style.FILL
-    }
-
-    private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(232, 182, 75)
-        style = Paint.Style.STROKE
-        strokeWidth = dp(3f)
-    }
-
-    private val stringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(232, 182, 75)
-        style = Paint.Style.STROKE
-        strokeWidth = dp(2f)
-    }
-
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(247, 231, 198)
-        textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.create(
-            android.graphics.Typeface.SERIF,
-            android.graphics.Typeface.BOLD
-        )
-    }
-
-    private var pressedScale = 1f
+    private var floatAnimator: AnimatorSet? = null
 
     init {
+        setBackgroundColor(Color.TRANSPARENT)
+        setPadding(0, 0, 0, 0)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        adjustViewBounds = false
         isClickable = true
         isFocusable = true
         contentDescription = "Online Leaderboards"
+
+        val encoded = resources.openRawResource(R.raw.leaderboard_balloon)
+            .bufferedReader()
+            .use { it.readText() }
+        val bytes = Base64.decode(encoded, Base64.DEFAULT)
+        setImageBitmap(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
     }
 
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        post { startFloatingAnimation() }
+    }
 
-        val cx = width / 2f
-        val cy = height * 0.39f
+    override fun onDetachedFromWindow() {
+        floatAnimator?.cancel()
+        floatAnimator = null
+        super.onDetachedFromWindow()
+    }
 
-        canvas.save()
-        canvas.scale(pressedScale, pressedScale, cx, cy)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        pivotX = w / 2f
+        // Pivot near the balloon knot so the small rotation reads as a tethered sway.
+        pivotY = h * 0.78f
+    }
 
-        val body = RectF(
-            width * 0.08f,
-            height * 0.04f,
-            width * 0.92f,
-            height * 0.70f
-        )
-        canvas.drawOval(body, bodyPaint)
-        canvas.drawOval(body, outlinePaint)
+    private fun startFloatingAnimation() {
+        floatAnimator?.cancel()
 
-        // Small painted highlight gives the balloon a glossy carnival look.
-        val highlight = RectF(
-            body.left + body.width() * 0.17f,
-            body.top + body.height() * 0.13f,
-            body.left + body.width() * 0.34f,
-            body.top + body.height() * 0.34f
-        )
-        canvas.drawOval(highlight, highlightPaint)
-
-        val knotTop = body.bottom - dp(2f)
-        val knotBottom = height * 0.77f
-        val knot = Path().apply {
-            moveTo(cx, knotTop)
-            lineTo(cx - width * 0.075f, knotBottom)
-            lineTo(cx + width * 0.075f, knotBottom)
-            close()
+        val easing = AccelerateDecelerateInterpolator()
+        val bob = ObjectAnimator.ofFloat(
+            this,
+            View.TRANSLATION_Y,
+            0f,
+            -dp(10f)
+        ).apply {
+            duration = 1600L
+            repeatMode = ObjectAnimator.REVERSE
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = easing
         }
-        canvas.drawPath(knot, bodyPaint)
-        canvas.drawPath(knot, outlinePaint)
 
-        val string = Path().apply {
-            moveTo(cx, knotBottom)
-            cubicTo(
-                cx - width * 0.10f,
-                height * 0.84f,
-                cx + width * 0.12f,
-                height * 0.91f,
-                cx - width * 0.02f,
-                height * 0.99f
-            )
+        val sway = ObjectAnimator.ofFloat(
+            this,
+            View.ROTATION,
+            -3.5f,
+            3.5f
+        ).apply {
+            duration = 1600L
+            repeatMode = ObjectAnimator.REVERSE
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = easing
         }
-        canvas.drawPath(string, stringPaint)
 
-        textPaint.textSize = width * 0.165f
-        val lineGap = textPaint.textSize * 0.90f
-        val centerY = body.centerY()
-        canvas.drawText("LEADER", cx, centerY - lineGap * 0.18f, textPaint)
-        canvas.drawText("BOARD", cx, centerY + lineGap * 0.82f, textPaint)
-
-        canvas.restore()
+        floatAnimator = AnimatorSet().apply {
+            playTogether(bob, sway)
+            start()
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                pressedScale = 0.95f
-                invalidate()
+                animate()
+                    .scaleX(0.96f)
+                    .scaleY(0.96f)
+                    .setDuration(80L)
+                    .start()
             }
 
             MotionEvent.ACTION_UP -> {
-                pressedScale = 1f
-                invalidate()
+                animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(120L)
+                    .start()
                 if (isEnabled) performClick()
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                pressedScale = 1f
-                invalidate()
+                animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(120L)
+                    .start()
             }
         }
         return true
