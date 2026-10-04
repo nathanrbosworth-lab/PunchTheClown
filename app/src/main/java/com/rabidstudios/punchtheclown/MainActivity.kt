@@ -982,24 +982,38 @@ class MainActivity : Activity() {
     private fun leaderboardRefreshSign(
         onClick: () -> Unit
     ): ImageButton {
-        val encoded = intArrayOf(
-            R.raw.leaderboard_refresh_arrow_0,
-            R.raw.leaderboard_refresh_arrow_1,
-            R.raw.leaderboard_refresh_arrow_2,
-            R.raw.leaderboard_refresh_arrow_3,
-            R.raw.leaderboard_refresh_arrow_4
-        ).joinToString(separator = "") { rawId ->
-            resources.openRawResource(rawId)
-                .bufferedReader()
-                .use { it.readText().trim() }
+        val encoded = resources.openRawResource(R.raw.leaderboard_refresh_arrow)
+            .bufferedReader()
+            .use { it.readText().trim() }
+        val decoded = runCatching { Base64.decode(encoded, Base64.DEFAULT) }.getOrNull()
+        val arrowBitmap = decoded
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+
+        // The source slot is replaced with the approved standalone arrow art
+        // in the distributed APK. Keep a safe fallback for source-only builds.
+        val displayBitmap = arrowBitmap ?: run {
+            val cellWidth = woodSignSheet.width / 2
+            val cellHeight = woodSignSheet.height / 3
+            Bitmap.createBitmap(
+                woodSignSheet,
+                0,
+                2 * cellHeight,
+                cellWidth,
+                cellHeight
+            )
         }
-        val bytes = Base64.decode(encoded, Base64.DEFAULT)
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        val signWidth = (resources.displayMetrics.widthPixels * 0.82f).toInt()
-        val signHeight = (signWidth * bitmap.height.toFloat() / bitmap.width.toFloat()).toInt()
+
+        val signWidth = (resources.displayMetrics.widthPixels * 0.86f).toInt()
+        val aspect = if (arrowBitmap != null && arrowBitmap.width > 0) {
+            arrowBitmap.height.toFloat() / arrowBitmap.width.toFloat()
+        } else {
+            0.42f
+        }
+        val signHeight = (signWidth * aspect).toInt().coerceAtLeast(dp(92))
 
         return ImageButton(this).apply {
-            setImageBitmap(bitmap)
+            setImageBitmap(displayBitmap)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = false
             setBackgroundColor(Color.TRANSPARENT)
