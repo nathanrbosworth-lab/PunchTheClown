@@ -816,93 +816,23 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun leaderboardMarqueeTitle(): FrameLayout {
-        val signWidth = (resources.displayMetrics.widthPixels * 0.90f).toInt()
-        val signHeight = (signWidth * 0.30f).toInt()
+    /**
+     * Use the exact same approved Punch the Clown marquee artwork as the
+     * other game screens. The leaderboard page title sits below it rather
+     * than recreating the marquee with a separate drawn rectangle/bulb style.
+     */
+    private fun leaderboardMarqueeTitle(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
 
-        return FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(113, 28, 30))
-                setStroke(dp(5), Color.rgb(94, 49, 23))
-                cornerRadius = dp(14).toFloat()
-            }
-
-            val inner = LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(36), dp(15), dp(36), dp(15))
-                addView(TextView(this@MainActivity).apply {
-                    text = "ONLINE LEADERBOARDS"
-                    textSize = 25f
-                    setTextColor(cream)
-                    gravity = Gravity.CENTER
-                    setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
-                    setShadowLayer(dp(3).toFloat(), 0f, dp(2).toFloat(), Color.rgb(56, 20, 16))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = "ALL-TIME PUBLIC SCORES"
-                    textSize = 12f
-                    setTextColor(gold)
-                    gravity = Gravity.CENTER
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                })
-            }
-            addView(
-                inner,
-                FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
-
-            addView(
-                object : View(this@MainActivity) {
-                    private val bulbPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                    private val socketPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        color = Color.rgb(75, 39, 19)
-                    }
-
-                    override fun onDraw(canvas: android.graphics.Canvas) {
-                        super.onDraw(canvas)
-                        val w = width.toFloat()
-                        val h = height.toFloat()
-                        val r = minOf(w, h) * 0.032f
-                        val topY = h * 0.10f
-                        val bottomY = h * 0.90f
-                        val leftX = w * 0.035f
-                        val rightX = w * 0.965f
-
-                        fun bulb(x: Float, y: Float, warm: Boolean) {
-                            canvas.drawCircle(x, y, r * 1.35f, socketPaint)
-                            bulbPaint.color = if (warm) Color.rgb(255, 184, 55) else Color.rgb(255, 241, 190)
-                            canvas.drawCircle(x, y, r, bulbPaint)
-                            bulbPaint.color = Color.argb(185, 255, 255, 255)
-                            canvas.drawCircle(x - r * 0.24f, y - r * 0.24f, r * 0.25f, bulbPaint)
-                        }
-
-                        val across = 9
-                        for (i in 0 until across) {
-                            val x = w * (0.08f + i * (0.84f / (across - 1)))
-                            bulb(x, topY, i % 2 == 0)
-                            bulb(x, bottomY, i % 2 != 0)
-                        }
-                        bulb(leftX, h * 0.33f, true)
-                        bulb(leftX, h * 0.67f, false)
-                        bulb(rightX, h * 0.33f, false)
-                        bulb(rightX, h * 0.67f, true)
-                    }
-                },
-                FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
+            addView(marqueeTitle(210, 140))
+            addView(space(2))
+            addView(title("ONLINE LEADERBOARDS", 26f))
+            addView(subtitle("ALL-TIME PUBLIC SCORES", 13f))
 
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = "Online Leaderboards. All-time public scores."
-            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
+            contentDescription = "Punch the Clown. Online Leaderboards. All-time public scores."
         }
     }
 
