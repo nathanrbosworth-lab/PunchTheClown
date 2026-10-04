@@ -699,7 +699,13 @@ class MainActivity : Activity() {
             }
         )
         content.addView(space(8))
-        content.addView(button("Back to Game Select") { showMenu() })
+        content.addView(
+            button(
+                text = "Back to Game Select",
+                widthPx = 180,
+                heightPx = 85
+            ) { showMenu() }
+        )
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
