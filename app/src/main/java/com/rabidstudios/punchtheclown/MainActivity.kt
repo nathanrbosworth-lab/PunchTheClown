@@ -821,18 +821,23 @@ class MainActivity : Activity() {
      * other game screens. The leaderboard page title sits below it rather
      * than recreating the marquee with a separate drawn rectangle/bulb style.
      */
-    private fun leaderboardMarqueeTitle(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-
-            addView(marqueeTitle(210, 140))
-            addView(space(2))
-            addView(title("ONLINE LEADERBOARDS", 26f))
-            addView(subtitle("ALL-TIME PUBLIC SCORES", 13f))
-
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = "Punch the Clown. Online Leaderboards. All-time public scores."
+    /**
+     * Dedicated online leaderboard marquee using the approved generated
+     * ONLINE LEADERBOARDS artwork. Gameplay screens continue to use the
+     * Punch the Clown marquee unchanged.
+     */
+    private fun leaderboardMarqueeTitle(): ImageView {
+        return ImageView(this).apply {
+            setImageResource(R.drawable.leaderboard_marquee)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = false
+            contentDescription = "Online Leaderboards"
+            layoutParams = LinearLayout.LayoutParams(
+                dp(210),
+                dp(140)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
         }
     }
 
