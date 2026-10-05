@@ -922,7 +922,7 @@ class MainActivity : Activity() {
 
     private fun leaderboardRefreshSign(
         onClick: () -> Unit
-    ): ImageButton {
+    ): FrameLayout {
         val encoded = resources.openRawResource(R.raw.leaderboard_refresh_arrow)
             .bufferedReader()
             .use { it.readText().trim() }
@@ -931,8 +931,8 @@ class MainActivity : Activity() {
             ?.takeIf { it.isNotEmpty() }
             ?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
-        // The source slot is replaced with the approved standalone arrow art
-        // in the distributed APK. Keep a safe fallback for source-only builds.
+        // If the standalone refresh art is unavailable, use the wood sign shape
+        // but explicitly cover its baked-in MAIN MENU wording with REFRESH.
         val displayBitmap = arrowBitmap ?: run {
             val cellWidth = woodSignSheet.width / 2
             val cellHeight = woodSignSheet.height / 3
@@ -953,18 +953,49 @@ class MainActivity : Activity() {
         }
         val signHeight = (signWidth * aspect).toInt().coerceAtLeast(dp(46))
 
-        return ImageButton(this).apply {
-            setImageBitmap(displayBitmap)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = false
-            setBackgroundColor(Color.TRANSPARENT)
-            setPadding(0, 0, 0, 0)
+        return FrameLayout(this).apply {
             isClickable = true
             isFocusable = true
             contentDescription = "Refresh online leaderboard"
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
+            }
+
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageBitmap(displayBitmap)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    adjustViewBounds = false
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            if (arrowBitmap == null) {
+                addView(
+                    TextView(this@MainActivity).apply {
+                        text = "REFRESH"
+                        textSize = 15f
+                        setTextColor(cream)
+                        gravity = Gravity.CENTER
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                        background = GradientDrawable().apply {
+                            setColor(Color.rgb(92, 51, 25))
+                            setStroke(dp(1), gold)
+                            cornerRadius = dp(5).toFloat()
+                        }
+                        setPadding(dp(8), dp(2), dp(8), dp(2))
+                    },
+                    FrameLayout.LayoutParams(
+                        (signWidth * 0.64f).toInt(),
+                        (signHeight * 0.46f).toInt()
+                    ).apply {
+                        gravity = Gravity.CENTER
+                    }
+                )
             }
         }
     }
