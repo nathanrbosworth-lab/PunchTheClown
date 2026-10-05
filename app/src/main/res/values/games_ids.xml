@@ -12,4 +12,26 @@
 
     <!-- leaderboard Beaning the Clowns - High Score -->
     <string name="leaderboard_beaning_the_clowns__high_score" translatable="false">CgkIl8mltrsLEAIQAg</string>
+
+    <!-- M4 achievements: replace each UNCONFIGURED value with the Play Console ID after creation. -->
+    <string name="achievement_step_right_up" translatable="false">UNCONFIGURED_achievement_step_right_up</string>
+    <string name="achievement_double_feature" translatable="false">UNCONFIGURED_achievement_double_feature</string>
+    <string name="achievement_carnival_regular" translatable="false">UNCONFIGURED_achievement_carnival_regular</string>
+    <string name="achievement_midway_veteran" translatable="false">UNCONFIGURED_achievement_midway_veteran</string>
+    <string name="achievement_first_punch" translatable="false">UNCONFIGURED_achievement_first_punch</string>
+    <string name="achievement_no_clowning_around" translatable="false">UNCONFIGURED_achievement_no_clowning_around</string>
+    <string name="achievement_good_memory" translatable="false">UNCONFIGURED_achievement_good_memory</string>
+    <string name="achievement_steel_trap" translatable="false">UNCONFIGURED_achievement_steel_trap</string>
+    <string name="achievement_clown_savant" translatable="false">UNCONFIGURED_achievement_clown_savant</string>
+    <string name="achievement_punch_drunk" translatable="false">UNCONFIGURED_achievement_punch_drunk</string>
+    <string name="achievement_heavy_hitter" translatable="false">UNCONFIGURED_achievement_heavy_hitter</string>
+    <string name="achievement_punching_machine" translatable="false">UNCONFIGURED_achievement_punching_machine</string>
+    <string name="achievement_first_beaning" translatable="false">UNCONFIGURED_achievement_first_beaning</string>
+    <string name="achievement_bean_counter" translatable="false">UNCONFIGURED_achievement_bean_counter</string>
+    <string name="achievement_bean_there_done_that" translatable="false">UNCONFIGURED_achievement_bean_there_done_that</string>
+    <string name="achievement_bean_machine" translatable="false">UNCONFIGURED_achievement_bean_machine</string>
+    <string name="achievement_hot_streak" translatable="false">UNCONFIGURED_achievement_hot_streak</string>
+    <string name="achievement_on_a_roll" translatable="false">UNCONFIGURED_achievement_on_a_roll</string>
+    <string name="achievement_deadeye_at_the_midway" translatable="false">UNCONFIGURED_achievement_deadeye_at_the_midway</string>
+    <string name="achievement_clown_carnage" translatable="false">UNCONFIGURED_achievement_clown_carnage</string>
 </resources>

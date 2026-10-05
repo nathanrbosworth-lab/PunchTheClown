@@ -73,6 +73,20 @@ class LocalStatsRepository(
         }
     }
 
+    fun markAchievementEarned(key: AchievementKey) {
+        val earned = prefs.getStringSet(KEY_LOCAL_ACHIEVEMENTS, emptySet())
+            ?.toMutableSet()
+            ?: mutableSetOf()
+        if (earned.add(key.name)) {
+            prefs.edit().putStringSet(KEY_LOCAL_ACHIEVEMENTS, earned).apply()
+        }
+    }
+
+    fun isAchievementEarned(key: AchievementKey): Boolean =
+        prefs.getStringSet(KEY_LOCAL_ACHIEVEMENTS, emptySet())
+            ?.contains(key.name)
+            ?: false
+
     private fun recordPunch(result: GameResult): Boolean {
         val old = punchStats()
         val newHigh = result.score > old.highScore
@@ -123,5 +137,6 @@ class LocalStatsRepository(
 
         private const val KEY_PENDING_PUNCH_SCORE = "pending_online_punch_score"
         private const val KEY_PENDING_BEANING_SCORE = "pending_online_beaning_score"
+        private const val KEY_LOCAL_ACHIEVEMENTS = "local_achievement_flags"
     }
 }

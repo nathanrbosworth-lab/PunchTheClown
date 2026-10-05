@@ -67,6 +67,8 @@ class MainActivity : Activity() {
     private lateinit var prefs: android.content.SharedPreferences
     private lateinit var localStats: LocalStatsRepository
     private lateinit var leaderboardGateway: LeaderboardGateway
+    private lateinit var achievementGateway: AchievementGateway
+    private lateinit var achievementTracker: AchievementTracker
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -96,6 +98,8 @@ class MainActivity : Activity() {
         prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
         localStats = LocalStatsRepository(prefs)
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
+        achievementGateway = PlayGamesAchievementGateway(this)
+        achievementTracker = AchievementTracker(localStats, achievementGateway)
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
@@ -1305,6 +1309,10 @@ class MainActivity : Activity() {
             completedRounds = completedSequences
         )
         val newHigh = localStats.record(result)
+        achievementTracker.noteGameResult(result)
+        if (leaderboardGateway.authState == LeaderboardAuthState.AUTHENTICATED) {
+            achievementTracker.sync()
+        }
         queueAndSubmitOnlineScore(result)
 
         if (newHigh) {
@@ -1552,6 +1560,10 @@ class MainActivity : Activity() {
             misses = beaningBoard.misses
         )
         val newHigh = localStats.record(result)
+        achievementTracker.noteGameResult(result)
+        if (leaderboardGateway.authState == LeaderboardAuthState.AUTHENTICATED) {
+            achievementTracker.sync()
+        }
         queueAndSubmitOnlineScore(result)
 
         showBeaningResults(newHigh)
@@ -1687,6 +1699,7 @@ class MainActivity : Activity() {
                         ).show()
                     }
                     flushPendingOnlineScores()
+                    achievementTracker.sync()
                 }
 
                 LeaderboardAuthState.SIGNED_OUT -> {
@@ -1701,6 +1714,7 @@ class MainActivity : Activity() {
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 flushPendingOnlineScores()
+                                achievementTracker.sync()
                             } else {
                                 Toast.makeText(
                                     this,
