@@ -702,8 +702,8 @@ class MainActivity : Activity() {
         content.addView(
             button(
                 text = "Back to Game Select",
-                widthPx = 180,
-                heightPx = 85
+                widthPx = 90,
+                heightPx = 43
             ) { showMenu() }
         )
 
