@@ -702,8 +702,8 @@ class MainActivity : Activity() {
         content.addView(
             button(
                 text = "Back to Game Select",
-                widthPx = 90,
-                heightPx = 43
+                widthPx = 360,
+                heightPx = 170
             ) { showMenu() }
         )
 
@@ -945,13 +945,13 @@ class MainActivity : Activity() {
             )
         }
 
-        val signWidth = (resources.displayMetrics.widthPixels * 0.86f).toInt()
+        val signWidth = (resources.displayMetrics.widthPixels * 0.43f).toInt()
         val aspect = if (arrowBitmap != null && arrowBitmap.width > 0) {
             arrowBitmap.height.toFloat() / arrowBitmap.width.toFloat()
         } else {
             0.42f
         }
-        val signHeight = (signWidth * aspect).toInt().coerceAtLeast(dp(92))
+        val signHeight = (signWidth * aspect).toInt().coerceAtLeast(dp(46))
 
         return ImageButton(this).apply {
             setImageBitmap(displayBitmap)
