@@ -630,38 +630,22 @@ class MainActivity : Activity() {
         content.addView(leaderboardMarqueeTitle())
         content.addView(space(10))
 
-        val modeRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-        modeRow.addView(
-            leaderboardModeButton(
-                label = "PUNCH",
+        content.addView(
+            leaderboardModeSign(
+                label = "PUNCH THE CLOWN",
                 selected = mode == GameMode.PUNCH
             ) {
                 showOnlineLeaderboards(GameMode.PUNCH, forceReload = true)
-            },
-            LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                marginEnd = dp(4)
             }
         )
-        modeRow.addView(
-            leaderboardModeButton(
-                label = "BEANING",
+        content.addView(space(6))
+        content.addView(
+            leaderboardModeSign(
+                label = "BEANING THE CLOWNS",
                 selected = mode == GameMode.BEANING
             ) {
                 showOnlineLeaderboards(GameMode.BEANING, forceReload = true)
-            },
-            LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                marginStart = dp(4)
             }
-        )
-        content.addView(
-            modeRow,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
         )
 
         content.addView(space(12))
@@ -903,21 +887,30 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun leaderboardModeButton(
+    private fun leaderboardModeSign(
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): Button = Button(this).apply {
-        text = label
-        textSize = 16f
-        setTextColor(if (selected) dark else cream)
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        background = GradientDrawable().apply {
-            setColor(if (selected) gold else Color.rgb(92, 51, 25))
-            setStroke(dp(2), gold)
-            cornerRadius = dp(8).toFloat()
+    ): BeaningCarnivalSignView {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
+        val signHeight = (signWidth * 0.19f).toInt()
+        return BeaningCarnivalSignView(
+            this,
+            label,
+            BeaningCarnivalSignView.Scheme.BLUE,
+            mountedSolidly = true,
+            bothEndsPointed = true,
+            weathered = true
+        ).apply {
+            isClickable = true
+            isFocusable = true
+            alpha = if (selected) 1.0f else 0.76f
+            contentDescription = "$label leaderboard"
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
         }
-        setOnClickListener { onClick() }
     }
 
     private fun leaderboardRefreshSign(
