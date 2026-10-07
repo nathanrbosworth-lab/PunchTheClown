@@ -1,6 +1,7 @@
 package com.rabidstudios.punchtheclown
 
 import android.app.Activity
+import android.content.pm.ApplicationInfo
 import com.google.android.gms.ads.MobileAds
 
 /**
@@ -23,7 +24,8 @@ class AdMobManager(
     }
 
     fun rewardedAdUnitId(placement: RewardPlacement): String {
-        if (BuildConfig.DEBUG) {
+        val isDebuggable = activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (isDebuggable) {
             return activity.getString(R.string.admob_test_rewarded)
         }
 
