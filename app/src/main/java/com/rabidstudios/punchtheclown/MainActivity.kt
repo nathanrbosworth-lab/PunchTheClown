@@ -542,6 +542,11 @@ class MainActivity : Activity() {
         r.addView(statLine("LONGEST RUN", beaningStats.longestRun.toString()))
 
         r.addView(space(18))
+        r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
+        r.addView(space(4))
+        r.addView(button("View Achievements") { showPlayGamesAchievements() })
+
+        r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
         r.addView(space(4))
 
@@ -1684,6 +1689,40 @@ class MainActivity : Activity() {
         gravity = Gravity.CENTER
         setPadding(0, dp(6), 0, dp(6))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+
+    private fun showPlayGamesAchievements() {
+        fun openAchievements() {
+            achievementTracker.sync()
+            achievementGateway.showAchievements { opened ->
+                if (!opened) {
+                    Toast.makeText(
+                        this,
+                        "Google Play Games achievements are unavailable",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
+        if (leaderboardGateway.authState == LeaderboardAuthState.AUTHENTICATED) {
+            openAchievements()
+            return
+        }
+
+        leaderboardGateway.requestSignIn { state ->
+            if (state == LeaderboardAuthState.AUTHENTICATED) {
+                playGamesConnectedNoticeShown = true
+                flushPendingOnlineScores()
+                openAchievements()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Sign in to Google Play Games to view achievements",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun refreshPlayGamesAuthentication() {

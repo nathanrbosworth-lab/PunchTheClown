@@ -22,6 +22,22 @@ class PlayGamesAchievementGateway(
         }
     }
 
+    override fun showAchievements(onComplete: (Boolean) -> Unit) {
+        runCatching {
+            PlayGames.getAchievementsClient(activity)
+                .getAchievementsIntent()
+                .addOnSuccessListener { intent ->
+                    activity.startActivity(intent)
+                    onComplete(true)
+                }
+                .addOnFailureListener {
+                    onComplete(false)
+                }
+        }.onFailure {
+            onComplete(false)
+        }
+    }
+
     private fun configuredId(key: AchievementKey): String? {
         val value = when (key) {
             AchievementKey.STEP_RIGHT_UP -> activity.getString(R.string.achievement_step_right_up)
