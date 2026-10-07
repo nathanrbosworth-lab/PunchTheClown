@@ -919,20 +919,17 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): BeaningCarnivalSignView {
-        val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
-        val signHeight = (signWidth * 0.19f).toInt()
-        return BeaningCarnivalSignView(
+    ): GameModeMarqueeButtonView {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
+        val signHeight = (signWidth * 0.24f).toInt()
+        return GameModeMarqueeButtonView(
             this,
             label,
-            BeaningCarnivalSignView.Scheme.BLUE,
-            mountedSolidly = true,
-            bothEndsPointed = true,
-            weathered = true
+            selected = selected,
+            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
         ).apply {
             isClickable = true
             isFocusable = true
-            alpha = if (selected) 1.0f else 0.76f
             contentDescription = "$label leaderboard"
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
@@ -986,20 +983,17 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): BeaningCarnivalSignView {
-        val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
-        val signHeight = (signWidth * 0.19f).toInt()
-        return BeaningCarnivalSignView(
+    ): GameModeMarqueeButtonView {
+        val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
+        val signHeight = (signWidth * 0.24f).toInt()
+        return GameModeMarqueeButtonView(
             this,
             label,
-            BeaningCarnivalSignView.Scheme.BLUE,
-            mountedSolidly = true,
-            bothEndsPointed = true,
-            weathered = true
+            selected = selected,
+            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
         ).apply {
             isClickable = true
             isFocusable = true
-            alpha = if (selected) 1.0f else 0.76f
             contentDescription = "$label stats"
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
