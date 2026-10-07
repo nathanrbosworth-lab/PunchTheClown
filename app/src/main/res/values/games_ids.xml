@@ -7,31 +7,49 @@
     <!-- package_name -->
     <string name="package_name" translatable="false">com.rabidstudios.punchtheclown</string>
 
+    <!-- achievement Step Right Up! -->
+    <string name="achievement_step_right_up" translatable="false">CgkIl8mltrsLEAIQAw</string>
+    <!-- achievement Double Feature -->
+    <string name="achievement_double_feature" translatable="false">CgkIl8mltrsLEAIQDw</string>
+    <!-- achievement Carnival Regular -->
+    <string name="achievement_carnival_regular" translatable="false">CgkIl8mltrsLEAIQEA</string>
+    <!-- achievement Midway Veteran -->
+    <string name="achievement_midway_veteran" translatable="false">CgkIl8mltrsLEAIQEw</string>
+    <!-- achievement First Punch -->
+    <string name="achievement_first_punch" translatable="false">CgkIl8mltrsLEAIQCA</string>
+    <!-- achievement No Clowning Around -->
+    <string name="achievement_no_clowning_around" translatable="false">CgkIl8mltrsLEAIQBA</string>
+    <!-- achievement Good Memory -->
+    <string name="achievement_good_memory" translatable="false">CgkIl8mltrsLEAIQDQ</string>
+    <!-- achievement Steel Trap -->
+    <string name="achievement_steel_trap" translatable="false">CgkIl8mltrsLEAIQEQ</string>
+    <!-- achievement Clown Savant -->
+    <string name="achievement_clown_savant" translatable="false">CgkIl8mltrsLEAIQEg</string>
+    <!-- achievement Punch Drunk -->
+    <string name="achievement_punch_drunk" translatable="false">CgkIl8mltrsLEAIQBw</string>
+    <!-- achievement Heavy Hitter -->
+    <string name="achievement_heavy_hitter" translatable="false">CgkIl8mltrsLEAIQBg</string>
+    <!-- achievement Punching Machine -->
+    <string name="achievement_punching_machine" translatable="false">CgkIl8mltrsLEAIQCw</string>
+    <!-- achievement First Beaning -->
+    <string name="achievement_first_beaning" translatable="false">CgkIl8mltrsLEAIQDA</string>
+    <!-- achievement Bean Counter -->
+    <string name="achievement_bean_counter" translatable="false">CgkIl8mltrsLEAIQDg</string>
+    <!-- achievement Bean There — Done That -->
+    <string name="achievement_bean_there__done_that" translatable="false">CgkIl8mltrsLEAIQFA</string>
+    <!-- achievement Bean Machine -->
+    <string name="achievement_bean_machine" translatable="false">CgkIl8mltrsLEAIQBQ</string>
+    <!-- achievement Hot Streak -->
+    <string name="achievement_hot_streak" translatable="false">CgkIl8mltrsLEAIQCg</string>
+    <!-- achievement On a Roll -->
+    <string name="achievement_on_a_roll" translatable="false">CgkIl8mltrsLEAIQCQ</string>
+    <!-- achievement Deadeye at the Midway -->
+    <string name="achievement_deadeye_at_the_midway" translatable="false">CgkIl8mltrsLEAIQFg</string>
+    <!-- achievement Clown Carnage -->
+    <string name="achievement_clown_carnage" translatable="false">CgkIl8mltrsLEAIQFQ</string>
+
     <!-- leaderboard Punch the Clown - High Score -->
     <string name="leaderboard_punch_the_clown_high_score" translatable="false">CgkIl8mltrsLEAIQAQ</string>
-
     <!-- leaderboard Beaning the Clowns - High Score -->
     <string name="leaderboard_beaning_the_clowns__high_score" translatable="false">CgkIl8mltrsLEAIQAg</string>
-
-    <!-- M4 achievements: replace each UNCONFIGURED value with the Play Console ID after creation. -->
-    <string name="achievement_step_right_up" translatable="false">UNCONFIGURED_achievement_step_right_up</string>
-    <string name="achievement_double_feature" translatable="false">UNCONFIGURED_achievement_double_feature</string>
-    <string name="achievement_carnival_regular" translatable="false">UNCONFIGURED_achievement_carnival_regular</string>
-    <string name="achievement_midway_veteran" translatable="false">UNCONFIGURED_achievement_midway_veteran</string>
-    <string name="achievement_first_punch" translatable="false">UNCONFIGURED_achievement_first_punch</string>
-    <string name="achievement_no_clowning_around" translatable="false">UNCONFIGURED_achievement_no_clowning_around</string>
-    <string name="achievement_good_memory" translatable="false">UNCONFIGURED_achievement_good_memory</string>
-    <string name="achievement_steel_trap" translatable="false">UNCONFIGURED_achievement_steel_trap</string>
-    <string name="achievement_clown_savant" translatable="false">UNCONFIGURED_achievement_clown_savant</string>
-    <string name="achievement_punch_drunk" translatable="false">UNCONFIGURED_achievement_punch_drunk</string>
-    <string name="achievement_heavy_hitter" translatable="false">UNCONFIGURED_achievement_heavy_hitter</string>
-    <string name="achievement_punching_machine" translatable="false">UNCONFIGURED_achievement_punching_machine</string>
-    <string name="achievement_first_beaning" translatable="false">UNCONFIGURED_achievement_first_beaning</string>
-    <string name="achievement_bean_counter" translatable="false">UNCONFIGURED_achievement_bean_counter</string>
-    <string name="achievement_bean_there_done_that" translatable="false">UNCONFIGURED_achievement_bean_there_done_that</string>
-    <string name="achievement_bean_machine" translatable="false">UNCONFIGURED_achievement_bean_machine</string>
-    <string name="achievement_hot_streak" translatable="false">UNCONFIGURED_achievement_hot_streak</string>
-    <string name="achievement_on_a_roll" translatable="false">UNCONFIGURED_achievement_on_a_roll</string>
-    <string name="achievement_deadeye_at_the_midway" translatable="false">UNCONFIGURED_achievement_deadeye_at_the_midway</string>
-    <string name="achievement_clown_carnage" translatable="false">UNCONFIGURED_achievement_clown_carnage</string>
 </resources>

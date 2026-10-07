@@ -38,7 +38,7 @@ class PlayGamesAchievementGateway(
             AchievementKey.PUNCHING_MACHINE -> activity.getString(R.string.achievement_punching_machine)
             AchievementKey.FIRST_BEANING -> activity.getString(R.string.achievement_first_beaning)
             AchievementKey.BEAN_COUNTER -> activity.getString(R.string.achievement_bean_counter)
-            AchievementKey.BEAN_THERE_DONE_THAT -> activity.getString(R.string.achievement_bean_there_done_that)
+            AchievementKey.BEAN_THERE_DONE_THAT -> activity.getString(R.string.achievement_bean_there__done_that)
             AchievementKey.BEAN_MACHINE -> activity.getString(R.string.achievement_bean_machine)
             AchievementKey.HOT_STREAK -> activity.getString(R.string.achievement_hot_streak)
             AchievementKey.ON_A_ROLL -> activity.getString(R.string.achievement_on_a_roll)

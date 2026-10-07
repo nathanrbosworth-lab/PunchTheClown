@@ -1,8 +1,8 @@
 # M4 Achievement Setup
 
-Version foundation: 0.4.23-m4-alpha
+Version foundation: 0.4.24-m4-alpha
 
-The app-side achievement architecture is implemented. Google Play Console achievement IDs still need to be created and copied into `app/src/main/res/values/games_ids.xml`.
+The app-side achievement architecture is implemented and all 20 Google Play Console achievement IDs are wired into `app/src/main/res/values/games_ids.xml`.
 
 ## Achievement catalog
 
@@ -22,7 +22,7 @@ The app-side achievement architecture is implemented. Google Play Console achiev
 | achievement_punching_machine | Punching Machine | Incremental | 1,000 correct Punch inputs |
 | achievement_first_beaning | First Beaning | Standard | First Beaning hit |
 | achievement_bean_counter | Bean Counter | Incremental | 100 Beaning hits |
-| achievement_bean_there_done_that | Bean There, Done That | Incremental | 500 Beaning hits |
+| achievement_bean_there__done_that | Bean There, Done That | Incremental | 500 Beaning hits |
 | achievement_bean_machine | Bean Machine | Incremental | 1,000 Beaning hits |
 | achievement_hot_streak | Hot Streak | Standard | Longest Beaning run 10 |
 | achievement_on_a_roll | On a Roll | Standard | Longest Beaning run 25 |
@@ -35,9 +35,7 @@ Create each achievement in the same Play Games Services project as the two leade
 
 For incremental achievements, configure the exact number of steps shown in the table. All other achievements are standard one-time achievements.
 
-After creation, replace each `UNCONFIGURED_...` value in `games_ids.xml` with the generated Play Games achievement ID.
-
-Until the IDs are replaced, the app deliberately treats achievements as unconfigured and does not call Play Games for those entries.
+All generated Play Games achievement IDs have been copied into `games_ids.xml`. The build can now submit unlocks and incremental progress to Google Play Games for tester accounts.
 
 ## Runtime behavior
 
