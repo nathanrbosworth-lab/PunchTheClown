@@ -27,7 +27,7 @@ class PlayGamesAchievementGateway(
             PlayGames.getAchievementsClient(activity)
                 .getAchievementsIntent()
                 .addOnSuccessListener { intent ->
-                    activity.startActivity(intent)
+                    activity.startActivityForResult(intent, ACHIEVEMENTS_REQUEST_CODE)
                     onComplete(true)
                 }
                 .addOnFailureListener {
@@ -69,5 +69,6 @@ class PlayGamesAchievementGateway(
 
     companion object {
         private const val UNCONFIGURED_PREFIX = "UNCONFIGURED_"
+        private const val ACHIEVEMENTS_REQUEST_CODE = 9102
     }
 }

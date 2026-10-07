@@ -544,7 +544,7 @@ class MainActivity : Activity() {
         r.addView(space(18))
         r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
         r.addView(space(4))
-        r.addView(button("View Achievements") { showPlayGamesAchievements() })
+        r.addView(leaderboardNavButton("VIEW ACHIEVEMENTS") { showPlayGamesAchievements() })
 
         r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
