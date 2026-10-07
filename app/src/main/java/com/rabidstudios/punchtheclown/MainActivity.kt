@@ -504,7 +504,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showStatsSettings() {
+    private fun showStatsSettings(mode: GameMode = GameMode.PUNCH) {
         activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
@@ -519,27 +519,46 @@ class MainActivity : Activity() {
         r.addView(title("STATS & SETTINGS", 30f))
         r.addView(space(14))
 
-        r.addView(statsSectionSign("PUNCH THE CLOWN"))
-        r.addView(space(4))
-        val punchStats = localStats.punchStats()
+        r.addView(
+            statsModeSign(
+                label = "PUNCH THE CLOWN",
+                selected = mode == GameMode.PUNCH
+            ) {
+                showStatsSettings(GameMode.PUNCH)
+            }
+        )
+        r.addView(space(6))
+        r.addView(
+            statsModeSign(
+                label = "BEANING THE CLOWNS",
+                selected = mode == GameMode.BEANING
+            ) {
+                showStatsSettings(GameMode.BEANING)
+            }
+        )
 
-        r.addView(statLine("BEST SCORE", "%,d".format(punchStats.highScore)))
-        r.addView(statLine("HIGHEST LEVEL", punchStats.highestLevel.toString()))
-        r.addView(statLine("LONGEST SEQUENCE", punchStats.longestSequence.toString()))
-        r.addView(statLine("GAMES PLAYED", "%,d".format(punchStats.gamesPlayed)))
-        r.addView(statLine("CORRECT PUNCHES", "%,d".format(punchStats.correctPunches)))
-        r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(punchStats.sequencesCompleted)))
+        r.addView(space(12))
+        when (mode) {
+            GameMode.PUNCH -> {
+                val punchStats = localStats.punchStats()
+                r.addView(statLine("BEST SCORE", "%,d".format(punchStats.highScore)))
+                r.addView(statLine("HIGHEST LEVEL", punchStats.highestLevel.toString()))
+                r.addView(statLine("LONGEST SEQUENCE", punchStats.longestSequence.toString()))
+                r.addView(statLine("GAMES PLAYED", "%,d".format(punchStats.gamesPlayed)))
+                r.addView(statLine("CORRECT PUNCHES", "%,d".format(punchStats.correctPunches)))
+                r.addView(statLine("SEQUENCES COMPLETED", "%,d".format(punchStats.sequencesCompleted)))
+            }
 
-        r.addView(space(16))
-        r.addView(statsSectionSign("BEANING THE CLOWNS"))
-        r.addView(space(4))
-        val beaningStats = localStats.beaningStats()
-        r.addView(statLine("BEST SCORE", "%,d".format(beaningStats.highScore)))
-        r.addView(statLine("HIGHEST LEVEL", beaningStats.highestLevel.toString()))
-        r.addView(statLine("TOTAL CLOWNS HIT", "%,d".format(beaningStats.totalHits)))
-        r.addView(statLine("TOTAL MISSES", "%,d".format(beaningStats.totalMisses)))
-        r.addView(statLine("GAMES PLAYED", "%,d".format(beaningStats.gamesPlayed)))
-        r.addView(statLine("LONGEST RUN", beaningStats.longestRun.toString()))
+            GameMode.BEANING -> {
+                val beaningStats = localStats.beaningStats()
+                r.addView(statLine("BEST SCORE", "%,d".format(beaningStats.highScore)))
+                r.addView(statLine("HIGHEST LEVEL", beaningStats.highestLevel.toString()))
+                r.addView(statLine("TOTAL CLOWNS HIT", "%,d".format(beaningStats.totalHits)))
+                r.addView(statLine("TOTAL MISSES", "%,d".format(beaningStats.totalMisses)))
+                r.addView(statLine("GAMES PLAYED", "%,d".format(beaningStats.gamesPlayed)))
+                r.addView(statLine("LONGEST RUN", beaningStats.longestRun.toString()))
+            }
+        }
 
         r.addView(space(18))
         r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
@@ -963,7 +982,11 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun statsSectionSign(label: String): BeaningCarnivalSignView {
+    private fun statsModeSign(
+        label: String,
+        selected: Boolean,
+        onClick: () -> Unit
+    ): BeaningCarnivalSignView {
         val signWidth = (resources.displayMetrics.widthPixels * 0.72f).toInt()
         val signHeight = (signWidth * 0.19f).toInt()
         return BeaningCarnivalSignView(
@@ -974,7 +997,11 @@ class MainActivity : Activity() {
             bothEndsPointed = true,
             weathered = true
         ).apply {
-            contentDescription = "$label stats section"
+            isClickable = true
+            isFocusable = true
+            alpha = if (selected) 1.0f else 0.76f
+            contentDescription = "$label stats"
+            setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
