@@ -32,6 +32,12 @@ android {
         release {
             isMinifyEnabled = false
         }
+        create("playInternal") {
+            initWith(getByName("release"))
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("ciDebug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
