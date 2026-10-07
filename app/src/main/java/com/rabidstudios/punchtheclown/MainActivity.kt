@@ -47,6 +47,10 @@ class MainActivity : Activity() {
     private var longestSequence = 0
     private var correctInputs = 0
     private var completedSequences = 0
+    private var punchRoundStartScore = 0L
+    private var punchRoundStartCorrectInputs = 0
+    private var rewardedContinueUsed = false
+    private var rewardedFlowActive = false
     private var currentClown = 0
 
     private var inGame = false
@@ -115,7 +119,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
-        if (inGame && !gameFinished) {
+        if (inGame && !gameFinished && !rewardedFlowActive) {
             pausedByLifecycle = true
             sessionToken++
             handler.removeCallbacksAndMessages(null)
@@ -1108,6 +1112,11 @@ class MainActivity : Activity() {
         longestSequence = 0
         correctInputs = 0
         completedSequences = 0
+        punchRoundStartScore = 0L
+        punchRoundStartCorrectInputs = 0
+        rewardedContinueUsed = false
+        rewardedFlowActive = false
+        adMobManager.preload(AdMobManager.RewardPlacement.PUNCH_CONTINUE)
         inGame = true
         gameFinished = false
         activeMode = ActiveGameMode.PUNCH
@@ -1234,6 +1243,8 @@ class MainActivity : Activity() {
 
     private fun addRound() {
         if (!inGame || gameFinished) return
+        punchRoundStartScore = score
+        punchRoundStartCorrectInputs = correctInputs
         sequence.add(Random.nextInt(0, 9))
         level = sequence.size
         longestSequence = max(longestSequence, sequence.size - 1)
@@ -1298,7 +1309,7 @@ class MainActivity : Activity() {
 
             handler.postDelayed({
                 longestSequence = max(longestSequence, sequence.size - 1)
-                finishGameAndShowResults()
+                offerPunchRewardedContinueOrFinish()
             }, 950L)
             return
         }
@@ -1328,7 +1339,73 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun offerPunchRewardedContinueOrFinish() {
+        val placement = AdMobManager.RewardPlacement.PUNCH_CONTINUE
+        if (rewardedContinueUsed || !adMobManager.isReady(placement)) {
+            adMobManager.preload(placement)
+            finishGameAndShowResults()
+            return
+        }
+
+        rewardedFlowActive = true
+        AlertDialog.Builder(this)
+            .setTitle("CONTINUE?")
+            .setMessage("Watch a rewarded ad to retry this sequence from the current round.")
+            .setPositiveButton("WATCH AD & CONTINUE") { _, _ ->
+                audio.stopEventSequence()
+                adMobManager.showRewarded(
+                    placement = placement,
+                    onRewardEarned = {
+                        rewardedContinueUsed = true
+                        rewardedFlowActive = false
+                        resumePunchAfterReward()
+                    },
+                    onClosedWithoutReward = {
+                        rewardedFlowActive = false
+                        finishGameAndShowResults()
+                    },
+                    onUnavailable = {
+                        rewardedFlowActive = false
+                        Toast.makeText(
+                            this,
+                            "Rewarded continue is unavailable right now.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        finishGameAndShowResults()
+                    }
+                )
+            }
+            .setNegativeButton("END GAME") { _, _ ->
+                rewardedFlowActive = false
+                finishGameAndShowResults()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun resumePunchAfterReward() {
+        if (!inGame || activeMode != ActiveGameMode.PUNCH || sequence.isEmpty()) {
+            finishGameAndShowResults()
+            return
+        }
+
+        sessionToken++
+        handler.removeCallbacksAndMessages(null)
+        audio.stopEventSequence()
+        score = punchRoundStartScore
+        correctInputs = punchRoundStartCorrectInputs
+        playerIndex = 0
+        gameFinished = false
+        board.inputEnabled = false
+        board.clearMarks()
+        updateHud()
+        statusText.text = "WATCH"
+        punchMarqueeFrame?.setMode(CarnivalLightMode.WATCH)
+        playSequence()
+    }
+
     private fun finishGameAndShowResults() {
+        rewardedFlowActive = false
         val result = GameResult(
             mode = GameMode.PUNCH,
             score = score,
@@ -1491,6 +1568,9 @@ class MainActivity : Activity() {
         inGame = true
         gameFinished = false
         pausedByLifecycle = false
+        rewardedContinueUsed = false
+        rewardedFlowActive = false
+        adMobManager.preload(AdMobManager.RewardPlacement.BEANING_CONTINUE)
 
         beaningRoot = FrameLayout(this).apply {
             setBackgroundColor(dark)
@@ -1510,7 +1590,7 @@ class MainActivity : Activity() {
                 audio.playBeanGameOver()
             }
             onGameOverFinished = {
-                finishBeaningGameAndShowResults()
+                offerBeaningRewardedContinueOrFinish()
             }
         }
         beaningRoot.addView(
@@ -1573,7 +1653,58 @@ class MainActivity : Activity() {
             .show()
     }
 
+    private fun offerBeaningRewardedContinueOrFinish() {
+        if (!::beaningBoard.isInitialized) return
+
+        val placement = AdMobManager.RewardPlacement.BEANING_CONTINUE
+        if (rewardedContinueUsed || !adMobManager.isReady(placement)) {
+            adMobManager.preload(placement)
+            finishBeaningGameAndShowResults()
+            return
+        }
+
+        rewardedFlowActive = true
+        AlertDialog.Builder(this)
+            .setTitle("CONTINUE?")
+            .setMessage("Watch a rewarded ad for one extra miss and continue this run.")
+            .setPositiveButton("WATCH AD & CONTINUE") { _, _ ->
+                audio.stopEventSequence()
+                adMobManager.showRewarded(
+                    placement = placement,
+                    onRewardEarned = {
+                        rewardedContinueUsed = true
+                        rewardedFlowActive = false
+                        beaningBoard.grantRewardedContinue()
+                        gameFinished = false
+                        inGame = true
+                        activeMode = ActiveGameMode.BEANING
+                        runBeaningReadyGo(resuming = true)
+                    },
+                    onClosedWithoutReward = {
+                        rewardedFlowActive = false
+                        finishBeaningGameAndShowResults()
+                    },
+                    onUnavailable = {
+                        rewardedFlowActive = false
+                        Toast.makeText(
+                            this,
+                            "Rewarded continue is unavailable right now.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        finishBeaningGameAndShowResults()
+                    }
+                )
+            }
+            .setNegativeButton("END GAME") { _, _ ->
+                rewardedFlowActive = false
+                finishBeaningGameAndShowResults()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
     private fun finishBeaningGameAndShowResults() {
+        rewardedFlowActive = false
         if (gameFinished || !::beaningBoard.isInitialized) return
         gameFinished = true
         inGame = false
@@ -1619,7 +1750,7 @@ class MainActivity : Activity() {
             background = beaningWoodBackground(false)
         }
         panel.addView(TextView(this).apply {
-            text = "THAT'S THREE MISSES!"
+            text = "THAT'S ${beaningBoard.misses} MISSES!"
             textSize = 27f
             setTextColor(cream)
             gravity = Gravity.CENTER

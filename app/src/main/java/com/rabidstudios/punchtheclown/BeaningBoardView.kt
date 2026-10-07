@@ -177,6 +177,7 @@ class BeaningBoardView(context: Context) : View(context) {
     private var running = false
     private var paused = false
     private var gameOver = false
+    private var missLimit = BeaningTuning.MISS_LIMIT
     private var frozenAtMs = 0L
     private var finalAnimatedSlot: Int? = null
 
@@ -211,6 +212,7 @@ class BeaningBoardView(context: Context) : View(context) {
         running = false
         paused = false
         gameOver = false
+        missLimit = BeaningTuning.MISS_LIMIT
         frozenAtMs = 0L
         finalAnimatedSlot = null
         previewMode = false
@@ -258,6 +260,21 @@ class BeaningBoardView(context: Context) : View(context) {
         }
         removeSlots.forEach { targets.remove(it) }
         ensureDesiredTargets()
+        invalidate()
+    }
+
+    fun grantRewardedContinue() {
+        if (!gameOver) return
+        generation++
+        handler.removeCallbacksAndMessages(null)
+        targets.clear()
+        pendingSpawns = 0
+        missLimit++
+        gameOver = false
+        running = false
+        paused = true
+        frozenAtMs = 0L
+        finalAnimatedSlot = null
         invalidate()
     }
 
@@ -336,7 +353,7 @@ class BeaningBoardView(context: Context) : View(context) {
         currentRun = 0
         onMiss?.invoke(misses)
 
-        if (misses >= BeaningTuning.MISS_LIMIT) {
+        if (misses >= missLimit) {
             beginGameOver(finalSlot)
         }
         invalidate()
