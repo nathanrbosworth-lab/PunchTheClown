@@ -74,6 +74,7 @@ class MainActivity : Activity() {
     private lateinit var achievementGateway: AchievementGateway
     private lateinit var achievementTracker: AchievementTracker
     private lateinit var adMobManager: AdMobManager
+    private lateinit var billingManager: BillingManager
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -107,12 +108,15 @@ class MainActivity : Activity() {
         achievementTracker = AchievementTracker(localStats, achievementGateway)
         adMobManager = AdMobManager(this)
         adMobManager.initialize()
+        billingManager = BillingManager(this)
+        billingManager.start()
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
     }
 
     override fun onDestroy() {
+        if (::billingManager.isInitialized) billingManager.stop()
         audio.release()
         super.onDestroy()
     }

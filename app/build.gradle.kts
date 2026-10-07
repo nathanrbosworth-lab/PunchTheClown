@@ -11,8 +11,8 @@ android {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
         targetSdk = 35
-        versionCode = 80
-        versionName = "0.5.1-m5-alpha"
+        versionCode = 81
+        versionName = "0.5.2-m5-alpha"
     }
 
     signingConfigs {
@@ -48,4 +48,5 @@ android {
 dependencies {
     implementation("com.google.android.gms:play-services-games-v2:22.1.0")
     implementation("com.google.android.gms:play-services-ads:24.8.0")
+    implementation("com.android.billingclient:billing:9.1.0")
 }
