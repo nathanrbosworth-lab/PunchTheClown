@@ -1,5 +1,8 @@
 name: Build Punch the Clown APK
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -191,3 +194,19 @@ jobs:
           name: PunchTheClown-M4-alpha-0.4.26-achievements-intent-fix
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish shareable 0.4.26 APK
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.4.26-alpha >/dev/null 2>&1; then
+            echo "Release v0.4.26-alpha already exists; leaving it unchanged."
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk /tmp/PunchTheClown-0.4.26.apk
+            gh release create v0.4.26-alpha /tmp/PunchTheClown-0.4.26.apk \
+              --target "$GITHUB_SHA" \
+              --title "Punch the Clown 0.4.26 alpha" \
+              --notes "Friend/tester build of Punch the Clown 0.4.26. Includes Google Play Games achievements and the corrected View Achievements launcher." \
+              --prerelease
+          fi
