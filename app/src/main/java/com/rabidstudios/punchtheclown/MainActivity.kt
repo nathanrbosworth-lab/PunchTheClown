@@ -69,6 +69,7 @@ class MainActivity : Activity() {
     private lateinit var leaderboardGateway: LeaderboardGateway
     private lateinit var achievementGateway: AchievementGateway
     private lateinit var achievementTracker: AchievementTracker
+    private lateinit var adMobManager: AdMobManager
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -100,6 +101,8 @@ class MainActivity : Activity() {
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
         achievementGateway = PlayGamesAchievementGateway(this)
         achievementTracker = AchievementTracker(localStats, achievementGateway)
+        adMobManager = AdMobManager(this)
+        adMobManager.initialize()
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
