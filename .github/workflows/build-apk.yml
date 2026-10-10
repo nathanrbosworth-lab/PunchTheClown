@@ -91,12 +91,12 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
 
       - name: Install Android SDK packages
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
-      - name: Set up Gradle 8.9
+      - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
 
       - name: Install audio tooling
         run: |
@@ -193,7 +193,7 @@ jobs:
           verify_sign_asset "beaning_sign_instructions.webp" "aad7fd9a88d6ca15e637d6b3386a6612bcdaf93651e31138c86e877c8c3b8833"
           verify_sign_asset "rabid_studios_splash.webp" "f2e9e9bc00f2158cd67d39b77beebda8324f99fa3b80c1623910c0a127877428"
           unzip -l "$APK" | grep -q "leaderboard_marquee.webp"
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='81'.*versionName='0.5.2-m5-alpha'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='82'.*versionName='0.5.3-m5-alpha'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump permissions "$APK" | grep -q "com.android.vending.BILLING"
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK"
           $ANDROID_HOME/build-tools/35.0.0/zipalign -c -v 4 "$APK"
@@ -202,14 +202,14 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M5-alpha-0.5.2-billing-foundation
+          name: PunchTheClown-M5-alpha-0.5.3-api36-billing
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Upload Play internal AAB
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M5-alpha-0.5.2-play-internal-aab
+          name: PunchTheClown-M5-alpha-0.5.3-api36-play-internal-aab
           path: app/build/outputs/bundle/playInternal/app-playInternal.aab
           if-no-files-found: error
 

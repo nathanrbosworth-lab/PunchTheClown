@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.rabidstudios.punchtheclown"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 81
-        versionName = "0.5.2-m5-alpha"
+        targetSdk = 36
+        versionCode = 82
+        versionName = "0.5.3-m5-alpha"
     }
 
     signingConfigs {
