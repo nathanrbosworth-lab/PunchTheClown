@@ -142,10 +142,17 @@ class BillingManager(
             return
         }
 
+        val offerToken = offer.offerToken
+        if (offerToken.isNullOrBlank()) {
+            queryRemoveAdsProduct()
+            notifyUser("Remove Ads is not available from Google Play right now.")
+            return
+        }
+
         val productParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(details)
-                .setOfferToken(offer.offerToken)
+                .setOfferToken(offerToken)
                 .build()
 
         val params =
