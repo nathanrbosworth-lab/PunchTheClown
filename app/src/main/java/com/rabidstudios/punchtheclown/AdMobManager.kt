@@ -18,7 +18,8 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
  * can never hit the production rewarded placements.
  */
 class AdMobManager(
-    private val activity: Activity
+    private val activity: Activity,
+    private val adsRemoved: () -> Boolean = { false }
 ) {
     enum class RewardPlacement {
         PUNCH_CONTINUE,
@@ -27,15 +28,42 @@ class AdMobManager(
 
     private val rewardedAds = mutableMapOf<RewardPlacement, RewardedAd>()
     private val loadingPlacements = mutableSetOf<RewardPlacement>()
+    private var initialized = false
+    private var initializing = false
 
     fun initialize() {
+        if (initialized || initializing || adsRemoved()) return
+        initializing = true
         MobileAds.initialize(activity) {
+            initializing = false
+            initialized = true
+            if (!adsRemoved()) {
+                preload(RewardPlacement.PUNCH_CONTINUE)
+                preload(RewardPlacement.BEANING_CONTINUE)
+            }
+        }
+    }
+
+    fun onEntitlementChanged() {
+        if (adsRemoved()) {
+            rewardedAds.clear()
+            return
+        }
+
+        if (initialized) {
             preload(RewardPlacement.PUNCH_CONTINUE)
             preload(RewardPlacement.BEANING_CONTINUE)
+        } else {
+            initialize()
         }
     }
 
     fun preload(placement: RewardPlacement) {
+        if (adsRemoved()) return
+        if (!initialized) {
+            initialize()
+            return
+        }
         if (rewardedAds[placement] != null || !loadingPlacements.add(placement)) return
 
         RewardedAd.load(
@@ -45,7 +73,9 @@ class AdMobManager(
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
                     loadingPlacements.remove(placement)
-                    rewardedAds[placement] = ad
+                    if (!adsRemoved()) {
+                        rewardedAds[placement] = ad
+                    }
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
@@ -57,7 +87,7 @@ class AdMobManager(
     }
 
     fun isReady(placement: RewardPlacement): Boolean =
-        rewardedAds[placement] != null
+        !adsRemoved() && rewardedAds[placement] != null
 
     fun showRewarded(
         placement: RewardPlacement,
@@ -65,6 +95,11 @@ class AdMobManager(
         onClosedWithoutReward: () -> Unit,
         onUnavailable: () -> Unit
     ) {
+        if (adsRemoved()) {
+            onUnavailable()
+            return
+        }
+
         val ad = rewardedAds.remove(placement)
         if (ad == null) {
             preload(placement)

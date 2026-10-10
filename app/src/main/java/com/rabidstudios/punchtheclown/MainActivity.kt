@@ -75,6 +75,9 @@ class MainActivity : Activity() {
     private lateinit var achievementTracker: AchievementTracker
     private lateinit var adMobManager: AdMobManager
     private lateinit var billingManager: BillingManager
+    private var removeAdsStatusText: TextView? = null
+    private var removeAdsPurchaseButton: Button? = null
+    private var restorePurchaseButton: Button? = null
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -106,9 +109,20 @@ class MainActivity : Activity() {
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
         achievementGateway = PlayGamesAchievementGateway(this)
         achievementTracker = AchievementTracker(localStats, achievementGateway)
-        adMobManager = AdMobManager(this)
+        billingManager = BillingManager(
+            activity = this,
+            onStateChanged = {
+                if (::adMobManager.isInitialized) {
+                    adMobManager.onEntitlementChanged()
+                }
+                refreshBillingUi()
+            },
+            onUserMessage = { message ->
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            }
+        )
+        adMobManager = AdMobManager(this) { billingManager.isRemoveAdsOwned }
         adMobManager.initialize()
-        billingManager = BillingManager(this)
         billingManager.start()
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
@@ -140,6 +154,9 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (::billingManager.isInitialized) {
+            billingManager.refresh()
+        }
         if (::leaderboardGateway.isInitialized) {
             refreshPlayGamesAuthentication()
         }
@@ -577,6 +594,37 @@ class MainActivity : Activity() {
         r.addView(leaderboardNavButton("VIEW ACHIEVEMENTS") { showPlayGamesAchievements() })
 
         r.addView(space(18))
+        r.addView(subtitle("REMOVE ADS", 18f))
+        r.addView(space(4))
+
+        removeAdsStatusText = TextView(this).apply {
+            textSize = 14f
+            setTextColor(cream)
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(4), dp(8), dp(8))
+        }
+        r.addView(
+            removeAdsStatusText,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        removeAdsPurchaseButton = leaderboardNavButton("REMOVE ADS") {
+            billingManager.launchRemoveAdsPurchase()
+        }
+        r.addView(removeAdsPurchaseButton)
+
+        restorePurchaseButton = leaderboardNavButton("RESTORE PURCHASE") {
+            billingManager.restoreRemoveAdsPurchase()
+        }.apply {
+            (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6)
+        }
+        r.addView(restorePurchaseButton)
+        refreshBillingUi()
+
+        r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
         r.addView(space(4))
 
@@ -649,6 +697,46 @@ class MainActivity : Activity() {
             )
         }
         setContentView(withCarnivalBackground(scroll))
+    }
+
+    private fun refreshBillingUi() {
+        if (!::billingManager.isInitialized) return
+
+        val owned = billingManager.isRemoveAdsOwned
+        val pending = billingManager.isRemoveAdsPending
+        val price = billingManager.removeAdsPrice
+
+        removeAdsStatusText?.text = when {
+            owned ->
+                "ADS REMOVED — THANK YOU! Rewarded continues are now ad-free."
+            pending ->
+                "PURCHASE PENDING — Google Play will unlock ad-free play after payment completes."
+            !billingManager.billingReady ->
+                "CONNECTING TO GOOGLE PLAY..."
+            billingManager.productQueryComplete && billingManager.removeAdsProductDetails == null ->
+                "REMOVE ADS IS NOT AVAILABLE FROM GOOGLE PLAY ON THIS INSTALLATION."
+            price != null ->
+                "ONE-TIME PURCHASE • $price • Restores automatically on your Google Play account."
+            else ->
+                "CHECKING PRICE WITH GOOGLE PLAY..."
+        }
+
+        removeAdsPurchaseButton?.apply {
+            text = when {
+                owned -> "ADS REMOVED"
+                pending -> "PURCHASE PENDING"
+                price != null -> "REMOVE ADS — $price"
+                else -> "REMOVE ADS"
+            }
+            isEnabled = billingManager.canPurchaseRemoveAds
+            alpha = if (isEnabled) 1f else 0.65f
+        }
+
+        restorePurchaseButton?.apply {
+            visibility = if (owned) View.GONE else View.VISIBLE
+            isEnabled = billingManager.billingReady
+            alpha = if (isEnabled) 1f else 0.65f
+        }
     }
 
     private fun showOnlineLeaderboards(
@@ -1345,7 +1433,31 @@ class MainActivity : Activity() {
 
     private fun offerPunchRewardedContinueOrFinish() {
         val placement = AdMobManager.RewardPlacement.PUNCH_CONTINUE
-        if (rewardedContinueUsed || !adMobManager.isReady(placement)) {
+        if (rewardedContinueUsed) {
+            finishGameAndShowResults()
+            return
+        }
+
+        if (billingManager.isRemoveAdsOwned) {
+            rewardedFlowActive = true
+            AlertDialog.Builder(this)
+                .setTitle("CONTINUE?")
+                .setMessage("Your Remove Ads purchase includes one ad-free continue this run.")
+                .setPositiveButton("CONTINUE") { _, _ ->
+                    rewardedContinueUsed = true
+                    rewardedFlowActive = false
+                    resumePunchAfterReward()
+                }
+                .setNegativeButton("END GAME") { _, _ ->
+                    rewardedFlowActive = false
+                    finishGameAndShowResults()
+                }
+                .setCancelable(false)
+                .show()
+            return
+        }
+
+        if (!adMobManager.isReady(placement)) {
             adMobManager.preload(placement)
             finishGameAndShowResults()
             return
@@ -1661,7 +1773,35 @@ class MainActivity : Activity() {
         if (!::beaningBoard.isInitialized) return
 
         val placement = AdMobManager.RewardPlacement.BEANING_CONTINUE
-        if (rewardedContinueUsed || !adMobManager.isReady(placement)) {
+        if (rewardedContinueUsed) {
+            finishBeaningGameAndShowResults()
+            return
+        }
+
+        if (billingManager.isRemoveAdsOwned) {
+            rewardedFlowActive = true
+            AlertDialog.Builder(this)
+                .setTitle("CONTINUE?")
+                .setMessage("Your Remove Ads purchase includes one ad-free extra miss this run.")
+                .setPositiveButton("CONTINUE") { _, _ ->
+                    rewardedContinueUsed = true
+                    rewardedFlowActive = false
+                    beaningBoard.grantRewardedContinue()
+                    gameFinished = false
+                    inGame = true
+                    activeMode = ActiveGameMode.BEANING
+                    runBeaningReadyGo(resuming = true)
+                }
+                .setNegativeButton("END GAME") { _, _ ->
+                    rewardedFlowActive = false
+                    finishBeaningGameAndShowResults()
+                }
+                .setCancelable(false)
+                .show()
+            return
+        }
+
+        if (!adMobManager.isReady(placement)) {
             adMobManager.preload(placement)
             finishBeaningGameAndShowResults()
             return
