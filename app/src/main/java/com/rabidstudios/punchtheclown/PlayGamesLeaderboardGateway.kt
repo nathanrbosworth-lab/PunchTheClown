@@ -23,7 +23,8 @@ class PlayGamesLeaderboardGateway(
 ) : LeaderboardGateway {
 
     override val isConfigured: Boolean =
-        activity.getString(R.string.app_id).trim() != UNCONFIGURED_PROJECT_ID
+        !activity.packageName.endsWith(".dev") &&
+            activity.getString(R.string.app_id).trim() != UNCONFIGURED_PROJECT_ID
 
     @Volatile
     override var authState: LeaderboardAuthState =
