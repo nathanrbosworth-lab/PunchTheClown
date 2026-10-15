@@ -8,6 +8,7 @@ class PlayGamesAchievementGateway(
 ) : AchievementGateway {
 
     override fun unlock(key: AchievementKey) {
+        if (activity.packageName.endsWith(".dev")) return
         val id = configuredId(key) ?: return
         runCatching {
             PlayGames.getAchievementsClient(activity).unlock(id)
@@ -15,6 +16,7 @@ class PlayGamesAchievementGateway(
     }
 
     override fun setSteps(key: AchievementKey, steps: Int) {
+        if (activity.packageName.endsWith(".dev")) return
         if (steps <= 0) return
         val id = configuredId(key) ?: return
         runCatching {
@@ -23,6 +25,10 @@ class PlayGamesAchievementGateway(
     }
 
     override fun showAchievements(onComplete: (Boolean) -> Unit) {
+        if (activity.packageName.endsWith(".dev")) {
+            onComplete(false)
+            return
+        }
         runCatching {
             PlayGames.getAchievementsClient(activity)
                 .getAchievementsIntent()
