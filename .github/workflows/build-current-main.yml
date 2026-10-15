@@ -1,4 +1,4 @@
-name: Build Current Main APK
+name: Build Current Main DEV APK
 
 on:
   workflow_run:
@@ -94,12 +94,12 @@ jobs:
             dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$file")"
             test "$dimensions" = "900x900"
           done
-      - name: Build current debug APK
+      - name: Build current DEV APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload current APK
+      - name: Upload current DEV APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M5-alpha-0.5.4-current-main
+          name: PunchTheClown-current-main-DEV-sideload-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
