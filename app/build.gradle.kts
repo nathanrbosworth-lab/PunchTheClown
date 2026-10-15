@@ -13,6 +13,7 @@ android {
         targetSdk = 36
         versionCode = 85
         versionName = "0.5.6-m5-alpha"
+        manifestPlaceholders["appLabel"] = "Punch the Clown"
     }
 
     signingConfigs {
@@ -27,6 +28,10 @@ android {
 
     buildTypes {
         getByName("debug") {
+            // Independent, safely sideloadable development installation.
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "Punch the Clown DEV"
             signingConfig = signingConfigs.getByName("ciDebug")
         }
         release {
