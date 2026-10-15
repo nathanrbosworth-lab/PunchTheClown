@@ -77,6 +77,14 @@ class MainActivity : Activity() {
     private lateinit var billingManager: BillingManager
     private var removeAdsBalloon: RemoveAdsBalloonButton? = null
     private var adFreeBadge: TextView? = null
+    // Pixel artwork extracted only from the explicitly approved three-sign preview.
+    private val approvedStatsSignAtlas: Bitmap by lazy {
+        val encoded = resources.openRawResource(R.raw.stats_marquee_atlas)
+            .bufferedReader().use { it.readText().trim() }
+        val webp = Base64.decode(encoded, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(webp, 0, webp.size)
+            ?: error("Approved Stats marquee atlas failed to decode")
+    }
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -619,7 +627,7 @@ class MainActivity : Activity() {
         r.addView(space(18))
         r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
         r.addView(space(4))
-        r.addView(leaderboardNavButton("VIEW ACHIEVEMENTS") { showPlayGamesAchievements() })
+        r.addView(achievementsMarqueeButton { showPlayGamesAchievements() })
 
         r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
@@ -756,10 +764,6 @@ class MainActivity : Activity() {
         mode: GameMode,
         forceReload: Boolean = false
     ) {
-        if (isDevelopmentBuild) {
-            Toast.makeText(this, "Online leaderboards are only available in the Google Play test build.", Toast.LENGTH_LONG).show()
-            return
-        }
         activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
@@ -846,6 +850,14 @@ class MainActivity : Activity() {
             )
         }
         setContentView(withCarnivalBackground(scroll))
+
+        if (isDevelopmentBuild) {
+            status.text = "DEV PREVIEW — ONLINE SCORES DISABLED"
+            results.addView(
+                leaderboardMessage("Marquee layout preview only. Online rankings and sign-in are tested in the Google Play build.")
+            )
+            return
+        }
 
         fun loadWhenAuthenticated() {
             status.text = "LOADING..."
@@ -1035,24 +1047,7 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): GameModeMarqueeButtonView {
-        val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
-        val signHeight = (signWidth * 0.24f).toInt()
-        return GameModeMarqueeButtonView(
-            this,
-            label,
-            selected = selected,
-            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
-        ).apply {
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$label leaderboard"
-            setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-        }
-    }
+    ): ImageButton = approvedGameModeMarquee(label, selected, "leaderboard", onClick)
 
     private fun leaderboardRefreshSign(
         onClick: () -> Unit
@@ -1099,21 +1094,55 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): GameModeMarqueeButtonView {
+    ): ImageButton = approvedGameModeMarquee(label, selected, "stats", onClick)
+
+    private fun approvedGameModeMarquee(
+        label: String,
+        selected: Boolean,
+        screen: String,
+        onClick: () -> Unit
+    ): ImageButton {
+        // Preserve the original Stats/Leaderboard control dimensions and positions.
         val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
         val signHeight = (signWidth * 0.24f).toInt()
-        return GameModeMarqueeButtonView(
-            this,
-            label,
-            selected = selected,
-            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
-        ).apply {
+        val y = if (label == "BEANING THE CLOWNS") 86 else 0
+        val bitmap = Bitmap.createBitmap(approvedStatsSignAtlas, 0, y, 360, 86)
+        return ImageButton(this).apply {
+            setImageBitmap(bitmap)
+            scaleType = ImageView.ScaleType.FIT_XY
+            adjustViewBounds = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            alpha = if (selected) 1f else 0.76f
             isClickable = true
             isFocusable = true
-            contentDescription = "$label stats"
+            contentDescription = "$label $screen"
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+    }
+
+    private fun achievementsMarqueeButton(onClick: () -> Unit): ImageButton {
+        // Same 54dp height and 18dp horizontal margins as the original button.
+        val bitmap = Bitmap.createBitmap(approvedStatsSignAtlas, 0, 172, 360, 58)
+        return ImageButton(this).apply {
+            setImageBitmap(bitmap)
+            scaleType = ImageView.ScaleType.FIT_XY
+            adjustViewBounds = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "View Achievements"
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(54)
+            ).apply {
+                leftMargin = dp(18)
+                rightMargin = dp(18)
             }
         }
     }
