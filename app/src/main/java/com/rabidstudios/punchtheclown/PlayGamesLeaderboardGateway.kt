@@ -320,7 +320,7 @@ class PlayGamesLeaderboardGateway(
     private fun recordAuthFailure(stage: String, error: Throwable?) {
         val statusCode = (error as? ApiException)?.statusCode
         val kind = when {
-            statusCode != null -> "Google API status code $statusCode (${error.javaClass.simpleName})"
+            statusCode != null -> "Google API status code $statusCode (${error?.javaClass?.simpleName ?: "ApiException"})"
             error != null -> error.javaClass.simpleName
             else -> "Result: not authenticated (no exception)"
         }
