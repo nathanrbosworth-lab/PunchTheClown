@@ -202,10 +202,14 @@ jobs:
           verify_sign_asset "rabid_studios_splash.webp" "f2e9e9bc00f2158cd67d39b77beebda8324f99fa3b80c1623910c0a127877428"
           unzip -l "$APK" | grep -q "leaderboard_marquee.webp"
           unzip -l "$APK" | grep -q "remove_ads_balloon"
+          unzip -l "$APK" | grep -q "stats_marquee_atlas"
+          base64 -d app/src/main/res/raw/stats_marquee_atlas > /tmp/stats_marquee_atlas.webp
+          file /tmp/stats_marquee_atlas.webp | grep -q "Web/P image"
+          echo "9e44381feee374ba945b830a87d0e6f5a84928e65bd0662b5e18b6e21c189528  /tmp/stats_marquee_atlas.webp" | sha256sum -c -
           base64 -d app/src/main/res/raw/remove_ads_balloon > /tmp/remove_ads_balloon.webp
           file /tmp/remove_ads_balloon.webp | grep -q "Web/P image"
           echo "114031a6d3a5b788074af29fd0a5a7f382b1bc7cc27d888978864f329bd7bd31  /tmp/remove_ads_balloon.webp" | sha256sum -c -
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='85'.*versionName='0.5.6-m5-alpha-dev'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='86'.*versionName='0.5.7-m5-alpha-dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "package: name='com.rabidstudios.punchtheclown.dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "application-label:'Punch the Clown DEV'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "targetSdkVersion:'36'"
@@ -217,7 +221,7 @@ jobs:
       - name: Upload DEV APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-0.5.6-DEV-sideload-APK
+          name: PunchTheClown-0.5.7-DEV-approved-stats-marquees
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
@@ -225,7 +229,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_play_aab }}
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M5-alpha-0.5.6-remove-ads-balloon-play-internal-aab
+          name: PunchTheClown-M5-alpha-0.5.7-approved-stats-marquees-play-internal-aab
           path: app/build/outputs/bundle/playInternal/app-playInternal.aab
           if-no-files-found: error
 
