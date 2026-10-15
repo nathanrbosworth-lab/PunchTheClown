@@ -27,6 +27,8 @@ data class LeaderboardSnapshot(
 interface LeaderboardGateway {
     val isConfigured: Boolean
     val authState: LeaderboardAuthState
+    /** Diagnostic from the most recent Play Games sign-in failure (test builds). */
+    val lastAuthDiagnostic: String?
 
     fun refreshAuthentication(
         onResult: (LeaderboardAuthState) -> Unit = {}

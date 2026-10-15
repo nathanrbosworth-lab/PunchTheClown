@@ -2020,6 +2020,7 @@ class MainActivity : Activity() {
                     "Sign in to Google Play Games to view achievements",
                     Toast.LENGTH_LONG
                 ).show()
+                showPlayGamesSignInDiagnostic()
             }
         }
     }
@@ -2054,27 +2055,33 @@ class MainActivity : Activity() {
                                 flushPendingOnlineScores()
                                 achievementTracker.sync()
                             } else {
-                                Toast.makeText(
-                                    this,
-                                    "Google Play Games sign-in not completed",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                showPlayGamesSignInDiagnostic()
                             }
                         }
                     }
                 }
 
                 LeaderboardAuthState.ERROR -> {
-                    Toast.makeText(
-                        this,
-                        "Google Play Games is unavailable",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showPlayGamesSignInDiagnostic()
                 }
 
                 LeaderboardAuthState.UNCONFIGURED,
                 LeaderboardAuthState.CHECKING -> Unit
             }
+        }
+    }
+
+    /** Diagnostic-only dialog, shown on sign-in failure; the M4 UI is unchanged. */
+    private fun showPlayGamesSignInDiagnostic() {
+        val detail = leaderboardGateway.lastAuthDiagnostic
+            ?: "Google Play Games returned no additional error information."
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            AlertDialog.Builder(this)
+                .setTitle("GOOGLE PLAY GAMES SIGN-IN FAILED")
+                .setMessage("$detail\n\nPlease take a screenshot of this error for troubleshooting.")
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
 
