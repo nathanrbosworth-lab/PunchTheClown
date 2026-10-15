@@ -75,9 +75,8 @@ class MainActivity : Activity() {
     private lateinit var achievementTracker: AchievementTracker
     private lateinit var adMobManager: AdMobManager
     private lateinit var billingManager: BillingManager
-    private var removeAdsStatusText: TextView? = null
-    private var removeAdsPurchaseButton: Button? = null
-    private var restorePurchaseButton: Button? = null
+    private var removeAdsBalloon: RemoveAdsBalloonButton? = null
+    private var adFreeBadge: TextView? = null
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -481,11 +480,31 @@ class MainActivity : Activity() {
             }
         }
 
+        // Independent, approved Remove Ads balloon, mirroring the Leaderboards
+        // balloon without changing the existing carnival menu illustration.
+        removeAdsBalloon = RemoveAdsBalloonButton(this).apply {
+            setOnClickListener { showRemoveAdsDialog() }
+        }
+        adFreeBadge = TextView(this).apply {
+            text = "AD-FREE"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(gold)
+            setBackgroundColor(Color.argb(220, 30, 15, 12))
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+
         root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
         root.addView(beaningTheClownsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(statsSettingsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(leaderboardBalloon, FrameLayout.LayoutParams(1, 1))
+        root.addView(removeAdsBalloon, FrameLayout.LayoutParams(1, 1))
+        root.addView(adFreeBadge, FrameLayout.LayoutParams(1, 1))
         setContentView(root)
+        refreshBillingUi()
 
         root.post {
             val rootW = root.width.toFloat()
@@ -529,6 +548,13 @@ class MainActivity : Activity() {
             // the unused upper-left of the approved Game Select artwork and
             // does not alter the three painted guidepost hit regions.
             placeSign(leaderboardBalloon, 0.035f, 0.055f, 0.300f, 0.235f)
+            // Opposite corner, with the same size and independently animated.
+            removeAdsBalloon?.let {
+                placeSign(it, 0.700f, 0.055f, 0.965f, 0.235f)
+            }
+            adFreeBadge?.let {
+                placeSign(it, 0.728f, 0.210f, 0.941f, 0.238f)
+            }
         }
     }
 
@@ -592,37 +618,6 @@ class MainActivity : Activity() {
         r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
         r.addView(space(4))
         r.addView(leaderboardNavButton("VIEW ACHIEVEMENTS") { showPlayGamesAchievements() })
-
-        r.addView(space(18))
-        r.addView(subtitle("REMOVE ADS", 18f))
-        r.addView(space(4))
-
-        removeAdsStatusText = TextView(this).apply {
-            textSize = 14f
-            setTextColor(cream)
-            gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(8))
-        }
-        r.addView(
-            removeAdsStatusText,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        removeAdsPurchaseButton = leaderboardNavButton("REMOVE ADS") {
-            billingManager.launchRemoveAdsPurchase()
-        }
-        r.addView(removeAdsPurchaseButton)
-
-        restorePurchaseButton = leaderboardNavButton("RESTORE PURCHASE") {
-            billingManager.restoreRemoveAdsPurchase()
-        }.apply {
-            (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6)
-        }
-        r.addView(restorePurchaseButton)
-        refreshBillingUi()
 
         r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
@@ -702,41 +697,49 @@ class MainActivity : Activity() {
     private fun refreshBillingUi() {
         if (!::billingManager.isInitialized) return
 
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            val owned = billingManager.isRemoveAdsOwned
+            removeAdsBalloon?.contentDescription =
+                if (owned) "Ad-Free purchased" else "Remove Ads"
+            adFreeBadge?.visibility = if (owned) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showRemoveAdsDialog() {
+        if (!::billingManager.isInitialized) return
+
         val owned = billingManager.isRemoveAdsOwned
         val pending = billingManager.isRemoveAdsPending
         val price = billingManager.removeAdsPrice
-
-        removeAdsStatusText?.text = when {
-            owned ->
-                "ADS REMOVED — THANK YOU! Rewarded continues are now ad-free."
-            pending ->
-                "PURCHASE PENDING — Google Play will unlock ad-free play after payment completes."
-            !billingManager.billingReady ->
-                "CONNECTING TO GOOGLE PLAY..."
-            billingManager.productQueryComplete && billingManager.removeAdsProductDetails == null ->
-                "REMOVE ADS IS NOT AVAILABLE FROM GOOGLE PLAY ON THIS INSTALLATION."
-            price != null ->
-                "ONE-TIME PURCHASE • $price • Restores automatically on your Google Play account."
-            else ->
-                "CHECKING PRICE WITH GOOGLE PLAY..."
+        val message = when {
+            owned -> "Ads are removed. Your one-time purchase also includes ad-free continues."
+            pending -> "Purchase pending. Google Play will activate ad-free play after payment completes."
+            !billingManager.billingReady -> "Connecting to Google Play. Please try again shortly."
+            billingManager.productQueryComplete &&
+                billingManager.removeAdsProductDetails == null ->
+                "Remove Ads is not available from Google Play on this installation."
+            price != null -> "One-time purchase: $price\nNo subscription. Your purchase can be restored on this Google Play account."
+            else -> "Checking Remove Ads price with Google Play. Please try again shortly."
         }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (owned) "AD-FREE" else "REMOVE ADS")
+            .setMessage(message)
+            .setNegativeButton("CLOSE", null)
 
-        removeAdsPurchaseButton?.apply {
-            text = when {
-                owned -> "ADS REMOVED"
-                pending -> "PURCHASE PENDING"
-                price != null -> "REMOVE ADS — $price"
-                else -> "REMOVE ADS"
+        if (!owned) {
+            dialog.setNeutralButton("RESTORE PURCHASE") { _, _ ->
+                billingManager.restoreRemoveAdsPurchase()
             }
-            isEnabled = billingManager.canPurchaseRemoveAds
-            alpha = if (isEnabled) 1f else 0.65f
         }
-
-        restorePurchaseButton?.apply {
-            visibility = if (owned) View.GONE else View.VISIBLE
-            isEnabled = billingManager.billingReady
-            alpha = if (isEnabled) 1f else 0.65f
+        if (!owned && !pending && billingManager.canPurchaseRemoveAds) {
+            dialog.setPositiveButton("BUY REMOVE ADS") { _, _ ->
+                billingManager.launchRemoveAdsPurchase()
+            }
+        } else {
+            dialog.setPositiveButton("OK", null)
         }
+        dialog.show()
     }
 
     private fun showOnlineLeaderboards(
