@@ -86,6 +86,7 @@ class MainActivity : Activity() {
     private val red = Color.rgb(183, 38, 46)
     private val wood = Color.rgb(54, 31, 22)
     private val dark = Color.rgb(27, 18, 16)
+    private val isDevelopmentBuild: Boolean get() = packageName.endsWith(".dev")
 
     // Locked illustrated-art canvas and Punch play field. The clown subject is
     // authored inside the centered 720 x 720 safe-art area (90 px margins).
@@ -122,7 +123,8 @@ class MainActivity : Activity() {
         )
         adMobManager = AdMobManager(this) { billingManager.isRemoveAdsOwned }
         adMobManager.initialize()
-        billingManager.start()
+        // Store-only billing is intentionally excluded from sideload builds.
+        if (!isDevelopmentBuild) billingManager.start()
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
@@ -153,7 +155,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::billingManager.isInitialized) {
+        if (::billingManager.isInitialized && !isDevelopmentBuild) {
             billingManager.refresh()
         }
         if (::leaderboardGateway.isInitialized) {
@@ -707,6 +709,14 @@ class MainActivity : Activity() {
     }
 
     private fun showRemoveAdsDialog() {
+        if (isDevelopmentBuild) {
+            AlertDialog.Builder(this)
+                .setTitle("REMOVE ADS — DEV BUILD")
+                .setMessage("The development APK is for artwork and gameplay testing. Test real Remove Ads purchases in the Google Play Internal Testing version.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
         if (!::billingManager.isInitialized) return
 
         val owned = billingManager.isRemoveAdsOwned
@@ -746,6 +756,10 @@ class MainActivity : Activity() {
         mode: GameMode,
         forceReload: Boolean = false
     ) {
+        if (isDevelopmentBuild) {
+            Toast.makeText(this, "Online leaderboards are only available in the Google Play test build.", Toast.LENGTH_LONG).show()
+            return
+        }
         activeMode = ActiveGameMode.NONE
         inGame = false
         gameFinished = false
@@ -1994,6 +2008,10 @@ class MainActivity : Activity() {
     }
 
     private fun showPlayGamesAchievements() {
+        if (isDevelopmentBuild) {
+            Toast.makeText(this, "Online achievements are only available in the Google Play test build.", Toast.LENGTH_LONG).show()
+            return
+        }
         fun openAchievements() {
             achievementTracker.sync()
             achievementGateway.showAchievements { opened ->
