@@ -11,8 +11,8 @@ android {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
         targetSdk = 36
-        versionCode = 85
-        versionName = "0.5.6-m5-alpha"
+        versionCode = 86
+        versionName = "0.5.7-m5-alpha"
         manifestPlaceholders["appLabel"] = "Punch the Clown"
     }
 
