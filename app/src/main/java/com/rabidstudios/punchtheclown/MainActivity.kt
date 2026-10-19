@@ -26,6 +26,7 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.gms.ads.AdView
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -74,6 +75,8 @@ class MainActivity : Activity() {
     private lateinit var achievementGateway: AchievementGateway
     private lateinit var achievementTracker: AchievementTracker
     private lateinit var adMobManager: AdMobManager
+    private var activeBanner: AdView? = null
+    private var activeBannerSlot: FrameLayout? = null
     private lateinit var billingManager: BillingManager
     private var removeAdsBalloon: RemoveAdsBalloonButton? = null
     private var adFreeBadge: TextView? = null
@@ -139,12 +142,14 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        clearAnchoredBanner()
         if (::billingManager.isInitialized) billingManager.stop()
         audio.release()
         super.onDestroy()
     }
 
     override fun onPause() {
+        activeBanner?.pause()
         super.onPause()
         if (inGame && !gameFinished && !rewardedFlowActive) {
             pausedByLifecycle = true
@@ -163,6 +168,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        activeBanner?.resume()
         if (::billingManager.isInitialized && !isDevelopmentBuild) {
             billingManager.refresh()
         }
@@ -222,6 +228,73 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
+    }
+
+    /**
+     * Separate bottom strip: no overlays on game art, signs, score panels, or
+     * tappable targets. Called only for Menu, Stats, Leaderboards and Results.
+     * Gameplay and ready screens never request banners.
+     */
+    private fun withAnchoredBanner(content: View): View {
+        clearAnchoredBanner()
+        val availableWidthDp =
+            (resources.displayMetrics.widthPixels / resources.displayMetrics.density)
+                .toInt().coerceAtLeast(32)
+        val adView = adMobManager.createBanner(availableWidthDp) ?: return content
+
+        val slot = FrameLayout(this).apply {
+            setBackgroundColor(dark)
+            addView(
+                adView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER
+                )
+            )
+        }
+        activeBanner = adView
+        activeBannerSlot = slot
+
+        val outer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(dark)
+            addView(
+                content,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+            addView(
+                slot,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    adView.adSize.getHeightInPixels(this@MainActivity)
+                )
+            )
+        }
+        // Only request after attachment; never load if a later navigation
+        // or Remove Ads entitlement has invalidated this banner.
+        adView.post {
+            if (activeBanner === adView &&
+                adView.isAttachedToWindow &&
+                !billingManager.isRemoveAdsOwned
+            ) {
+                adMobManager.loadBanner(adView)
+            }
+        }
+        return outer
+    }
+
+    private fun clearAnchoredBanner() {
+        activeBanner?.destroy()
+        activeBanner = null
+        activeBannerSlot?.let { slot ->
+            (slot.parent as? ViewGroup)?.removeView(slot)
+        }
+        activeBannerSlot = null
     }
 
     private fun withCarnivalBackground(content: View): FrameLayout {
@@ -513,7 +586,7 @@ class MainActivity : Activity() {
         root.addView(leaderboardBalloon, FrameLayout.LayoutParams(1, 1))
         root.addView(removeAdsBalloon, FrameLayout.LayoutParams(1, 1))
         root.addView(adFreeBadge, FrameLayout.LayoutParams(1, 1))
-        setContentView(root)
+        setContentView(withAnchoredBanner(root))
         refreshBillingUi()
 
         root.post {
@@ -701,7 +774,7 @@ class MainActivity : Activity() {
                 )
             )
         }
-        setContentView(withCarnivalBackground(scroll))
+        setContentView(withAnchoredBanner(withCarnivalBackground(scroll)))
     }
 
     private fun refreshBillingUi() {
@@ -710,6 +783,7 @@ class MainActivity : Activity() {
         runOnUiThread {
             if (isFinishing || isDestroyed) return@runOnUiThread
             val owned = billingManager.isRemoveAdsOwned
+            if (owned) clearAnchoredBanner()
             removeAdsBalloon?.contentDescription =
                 if (owned) "Ad-Free purchased" else "Remove Ads"
             adFreeBadge?.visibility = if (owned) View.VISIBLE else View.GONE
@@ -849,7 +923,7 @@ class MainActivity : Activity() {
                 )
             )
         }
-        setContentView(withCarnivalBackground(scroll))
+        setContentView(withAnchoredBanner(withCarnivalBackground(scroll)))
 
         if (isDevelopmentBuild) {
             status.text = "DEV PREVIEW — ONLINE SCORES DISABLED"
@@ -1168,6 +1242,7 @@ class MainActivity : Activity() {
     }
 
     private fun showReady() {
+        clearAnchoredBanner()
         activeMode = ActiveGameMode.NONE
         inGame = false
         chooseClown()
@@ -1263,6 +1338,7 @@ class MainActivity : Activity() {
     }
 
     private fun showGame() {
+        clearAnchoredBanner()
         val r = root()
         r.addView(marqueeTitle(170, 113))
 
@@ -1625,10 +1701,11 @@ class MainActivity : Activity() {
             startNewGame()
         })
         r.addView(button("MAIN MENU") { showMenu() })
-        setContentView(withCarnivalBackground(r))
+        setContentView(withAnchoredBanner(withCarnivalBackground(r)))
     }
 
     private fun showBeaningReady() {
+        clearAnchoredBanner()
         sessionToken++
         handler.removeCallbacksAndMessages(null)
         audio.stopEventSequence()
@@ -1723,6 +1800,7 @@ class MainActivity : Activity() {
     }
 
     private fun startBeaningGame() {
+        clearAnchoredBanner()
         sessionToken++
         handler.removeCallbacksAndMessages(null)
         audio.stopEventSequence()
@@ -1981,6 +2059,11 @@ class MainActivity : Activity() {
                 rightMargin = dp(28)
             }
         )
+
+        // Reparent the completed Beaning scene into a non-overlapping
+        // banner layout only after gameplay has stopped.
+        (beaningRoot.parent as? ViewGroup)?.removeView(beaningRoot)
+        setContentView(withAnchoredBanner(beaningRoot))
     }
 
     private fun beaningResultLine(label: String, value: String): TextView = TextView(this).apply {
