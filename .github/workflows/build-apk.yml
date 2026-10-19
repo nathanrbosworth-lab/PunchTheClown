@@ -212,7 +212,7 @@ jobs:
           base64 -d app/src/main/res/raw/remove_ads_balloon > /tmp/remove_ads_balloon.webp
           file /tmp/remove_ads_balloon.webp | grep -q "Web/P image"
           echo "114031a6d3a5b788074af29fd0a5a7f382b1bc7cc27d888978864f329bd7bd31  /tmp/remove_ads_balloon.webp" | sha256sum -c -
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='87'.*versionName='0.5.8-m5-alpha-dev'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='88'.*versionName='0.5.9-m5-alpha-dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "package: name='com.rabidstudios.punchtheclown.dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "application-label:'Punch the Clown DEV'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "targetSdkVersion:'36'"
@@ -224,7 +224,7 @@ jobs:
       - name: Upload DEV APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-0.5.8-DEV-anchored-banners
+          name: PunchTheClown-0.5.9-DEV-auto-hide-navigation
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
@@ -232,7 +232,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_play_aab }}
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-M5-alpha-0.5.8-anchored-banners-play-internal-aab
+          name: PunchTheClown-M5-alpha-0.5.9-auto-hide-navigation-play-internal-aab
           path: app/build/outputs/bundle/playInternal/app-playInternal.aab
           if-no-files-found: error
 
