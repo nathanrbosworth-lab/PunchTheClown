@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AdMob IDs for Punch the Clown. Debug builds use Google's rewarded test unit. -->
+<!-- Debug builds always use Google's test units. Production banners stay disabled until a real AdMob banner unit ID is configured. -->
 <resources>
     <string name="admob_app_id" translatable="false">ca-app-pub-7895758216369115~5488837188</string>
     <string name="admob_punch_rewarded_continue" translatable="false">ca-app-pub-7895758216369115/9792887586</string>
     <string name="admob_beaning_rewarded_continue" translatable="false">ca-app-pub-7895758216369115/5983661202</string>
     <string name="admob_test_rewarded" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
+    <string name="admob_test_banner" translatable="false">ca-app-pub-3940256099942544/9214589741</string>
+    <!-- Replace this with a new BANNER ad unit from AdMob before production release. -->
+    <string name="admob_banner" translatable="false"></string>
 </resources>
