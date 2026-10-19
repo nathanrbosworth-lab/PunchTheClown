@@ -11,8 +11,9 @@ android {
         applicationId = "com.rabidstudios.punchtheclown"
         minSdk = 26
         targetSdk = 36
-        versionCode = 83
-        versionName = "0.5.4-m5-alpha"
+        versionCode = 87
+        versionName = "0.5.8-m5-alpha"
+        manifestPlaceholders["appLabel"] = "Punch the Clown"
     }
 
     signingConfigs {
@@ -27,6 +28,10 @@ android {
 
     buildTypes {
         getByName("debug") {
+            // Independent, safely sideloadable development installation.
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "Punch the Clown DEV"
             signingConfig = signingConfigs.getByName("ciDebug")
         }
         release {

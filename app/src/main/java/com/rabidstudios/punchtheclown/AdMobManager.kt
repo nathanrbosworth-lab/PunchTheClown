@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.pm.ApplicationInfo
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
@@ -11,7 +13,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 /**
- * M5 rewarded-ad manager.
+ * M5 rewarded-ad and non-gameplay banner manager.
  *
  * Rewarded ads are preloaded and shown only after gameplay has already stopped.
  * Debug/test APKs always use Google's rewarded test unit so development traffic
@@ -84,6 +86,32 @@ class AdMobManager(
                 }
             }
         )
+    }
+
+    /**
+     * Anchored adaptive banners are permitted only on non-gameplay screens.
+     * The production banner ad unit must be configured in admob_ids.xml;
+     * never use Google's sample ad unit in a Play build.
+     */
+    fun createBanner(widthDp: Int): AdView? {
+        if (adsRemoved() || widthDp < 32) return null
+        val isDebuggable =
+            activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val adUnitId = if (isDebuggable) {
+            activity.getString(R.string.admob_test_banner)
+        } else {
+            activity.getString(R.string.admob_banner)
+        }
+        if (!adUnitId.startsWith("ca-app-pub-") || !adUnitId.contains('/')) return null
+
+        return AdView(activity).apply {
+            setAdUnitId(adUnitId)
+            setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, widthDp))
+        }
+    }
+
+    fun loadBanner(adView: AdView) {
+        if (!adsRemoved()) adView.loadAd(AdRequest.Builder().build())
     }
 
     fun isReady(placement: RewardPlacement): Boolean =
