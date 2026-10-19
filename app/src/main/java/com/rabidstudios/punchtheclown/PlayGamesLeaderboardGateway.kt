@@ -1,6 +1,8 @@
 package com.rabidstudios.punchtheclown
 
 import android.app.Activity
+import android.util.Log
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.games.PageDirection
 import com.google.android.gms.games.PlayGames
 import com.google.android.gms.games.LeaderboardsClient
@@ -21,11 +23,16 @@ class PlayGamesLeaderboardGateway(
 ) : LeaderboardGateway {
 
     override val isConfigured: Boolean =
-        activity.getString(R.string.app_id).trim() != UNCONFIGURED_PROJECT_ID
+        !activity.packageName.endsWith(".dev") &&
+            activity.getString(R.string.app_id).trim() != UNCONFIGURED_PROJECT_ID
 
     @Volatile
     override var authState: LeaderboardAuthState =
         if (isConfigured) LeaderboardAuthState.CHECKING else LeaderboardAuthState.UNCONFIGURED
+        private set
+
+    @Volatile
+    override var lastAuthDiagnostic: String? = null
         private set
 
     override fun refreshAuthentication(
@@ -38,18 +45,23 @@ class PlayGamesLeaderboardGateway(
 
         publish(LeaderboardAuthState.CHECKING) {}
         val client = runCatching { PlayGames.getGamesSignInClient(activity) }
-            .getOrElse {
+            .getOrElse { error ->
+                recordAuthFailure("Create sign-in client", error)
                 publish(LeaderboardAuthState.ERROR, onResult)
                 return
             }
 
         client.isAuthenticated()
             .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    recordAuthFailure("Authentication check", task.exception)
+                }
                 val state = when {
                     !task.isSuccessful -> LeaderboardAuthState.ERROR
                     task.result.isAuthenticated -> LeaderboardAuthState.AUTHENTICATED
                     else -> LeaderboardAuthState.SIGNED_OUT
                 }
+                if (state == LeaderboardAuthState.AUTHENTICATED) lastAuthDiagnostic = null
                 publish(state, onResult)
             }
     }
@@ -62,9 +74,11 @@ class PlayGamesLeaderboardGateway(
             return
         }
 
+        lastAuthDiagnostic = null
         publish(LeaderboardAuthState.CHECKING) {}
         val client = runCatching { PlayGames.getGamesSignInClient(activity) }
-            .getOrElse {
+            .getOrElse { error ->
+                recordAuthFailure("Create sign-in client", error)
                 publish(LeaderboardAuthState.ERROR, onResult)
                 return
             }
@@ -72,9 +86,18 @@ class PlayGamesLeaderboardGateway(
         client.signIn()
             .addOnCompleteListener { task ->
                 val state = when {
-                    !task.isSuccessful -> LeaderboardAuthState.ERROR
-                    task.result.isAuthenticated -> LeaderboardAuthState.AUTHENTICATED
-                    else -> LeaderboardAuthState.SIGNED_OUT
+                    !task.isSuccessful -> {
+                        recordAuthFailure("Interactive sign-in", task.exception)
+                        LeaderboardAuthState.ERROR
+                    }
+                    task.result.isAuthenticated -> {
+                        lastAuthDiagnostic = null
+                        LeaderboardAuthState.AUTHENTICATED
+                    }
+                    else -> {
+                        recordAuthFailure("Interactive sign-in", null)
+                        LeaderboardAuthState.SIGNED_OUT
+                    }
                 }
                 publish(state, onResult)
             }
@@ -295,6 +318,24 @@ class PlayGamesLeaderboardGateway(
         GameMode.BEANING -> activity.getString(R.string.leaderboard_beaning_the_clowns__high_score)
     }
 
+    private fun recordAuthFailure(stage: String, error: Throwable?) {
+        val statusCode = (error as? ApiException)?.statusCode
+        val kind = when {
+            statusCode != null -> "Google API status code $statusCode (${error?.javaClass?.simpleName ?: "ApiException"})"
+            error != null -> error.javaClass.simpleName
+            else -> "Result: not authenticated (no exception)"
+        }
+        val message = error?.message?.lineSequence()?.firstOrNull()?.take(120)
+        val diagnostic = "$stage: $kind" +
+            if (message.isNullOrBlank()) "" else "\n$message"
+        lastAuthDiagnostic = diagnostic
+        if (error != null) {
+            Log.e(LOG_TAG, diagnostic, error)
+        } else {
+            Log.w(LOG_TAG, diagnostic)
+        }
+    }
+
     private fun publish(
         state: LeaderboardAuthState,
         callback: (LeaderboardAuthState) -> Unit
@@ -304,6 +345,7 @@ class PlayGamesLeaderboardGateway(
     }
 
     companion object {
+        private const val LOG_TAG = "PunchPlayGames"
         const val UNCONFIGURED_PROJECT_ID = "0000000000"
     }
 }

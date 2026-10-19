@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +15,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Base64
 import android.view.Gravity
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -26,6 +29,7 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.gms.ads.AdView
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -74,10 +78,19 @@ class MainActivity : Activity() {
     private lateinit var achievementGateway: AchievementGateway
     private lateinit var achievementTracker: AchievementTracker
     private lateinit var adMobManager: AdMobManager
+    private var activeBanner: AdView? = null
+    private var activeBannerSlot: FrameLayout? = null
     private lateinit var billingManager: BillingManager
-    private var removeAdsStatusText: TextView? = null
-    private var removeAdsPurchaseButton: Button? = null
-    private var restorePurchaseButton: Button? = null
+    private var removeAdsBalloon: RemoveAdsBalloonButton? = null
+    private var adFreeBadge: TextView? = null
+    // Pixel artwork extracted only from the explicitly approved three-sign preview.
+    private val approvedStatsSignAtlas: Bitmap by lazy {
+        val encoded = resources.openRawResource(R.raw.stats_marquee_atlas)
+            .bufferedReader().use { it.readText().trim() }
+        val webp = Base64.decode(encoded, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(webp, 0, webp.size)
+            ?: error("Approved Stats marquee atlas failed to decode")
+    }
     private var punchMarqueeFrame: CarnivalMarqueeFrameView? = null
     private var playGamesManualSignInAttempted = false
     private var playGamesConnectedNoticeShown = false
@@ -87,6 +100,7 @@ class MainActivity : Activity() {
     private val red = Color.rgb(183, 38, 46)
     private val wood = Color.rgb(54, 31, 22)
     private val dark = Color.rgb(27, 18, 16)
+    private val isDevelopmentBuild: Boolean get() = packageName.endsWith(".dev")
 
     // Locked illustrated-art canvas and Punch play field. The clown subject is
     // authored inside the centered 720 x 720 safe-art area (90 px margins).
@@ -104,6 +118,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = dark
         window.navigationBarColor = dark
+        hideAndroidNavigationBar()
         prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
         localStats = LocalStatsRepository(prefs)
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
@@ -123,19 +138,22 @@ class MainActivity : Activity() {
         )
         adMobManager = AdMobManager(this) { billingManager.isRemoveAdsOwned }
         adMobManager.initialize()
-        billingManager.start()
+        // Store-only billing is intentionally excluded from sideload builds.
+        if (!isDevelopmentBuild) billingManager.start()
         audio = GameAudioManager(this)
         audio.enabled = prefs.getBoolean("sound_enabled", true)
         showSplash()
     }
 
     override fun onDestroy() {
+        clearAnchoredBanner()
         if (::billingManager.isInitialized) billingManager.stop()
         audio.release()
         super.onDestroy()
     }
 
     override fun onPause() {
+        activeBanner?.pause()
         super.onPause()
         if (inGame && !gameFinished && !rewardedFlowActive) {
             pausedByLifecycle = true
@@ -154,7 +172,9 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::billingManager.isInitialized) {
+        hideAndroidNavigationBar()
+        activeBanner?.resume()
+        if (::billingManager.isInitialized && !isDevelopmentBuild) {
             billingManager.refresh()
         }
         if (::leaderboardGateway.isInitialized) {
@@ -181,6 +201,32 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    /**
+     * Keep Android's top status bar visible while automatically hiding the
+     * bottom navigation controls. A swipe may reveal them temporarily.
+     * Reapply when focus returns from an ad, purchase flow or system dialog.
+     */
+    private fun hideAndroidNavigationBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.decorView.windowInsetsController?.apply {
+                systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsets.Type.navigationBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideAndroidNavigationBar()
     }
 
     @Deprecated("Deprecated in Java")
@@ -213,6 +259,85 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
+    }
+
+    /**
+     * Separate bottom strip: no overlays on game art, signs, score panels, or
+     * tappable targets. Called only for Menu, Stats, Leaderboards and Results.
+     * Gameplay and ready screens never request banners.
+     */
+    private fun withAnchoredBanner(content: View): View {
+        clearAnchoredBanner()
+        val availableWidthDp =
+            (resources.displayMetrics.widthPixels / resources.displayMetrics.density)
+                .toInt().coerceAtLeast(32)
+        val adView = adMobManager.createBanner(availableWidthDp) ?: return content
+
+        val slot = FrameLayout(this).apply {
+            setBackgroundColor(dark)
+            addView(
+                adView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER
+                )
+            )
+        }
+        activeBanner = adView
+        activeBannerSlot = slot
+
+        val outer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(dark)
+            // When the player swipes up, Android may briefly show its
+            // navigation controls on top of the game. Lift the banner above
+            // that temporary system inset, then reclaim the space once hidden.
+            setOnApplyWindowInsetsListener { view, insets ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+                    if (view.paddingBottom != bottom) {
+                        view.setPadding(0, 0, 0, bottom)
+                    }
+                }
+                insets
+            }
+            addView(
+                content,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+            addView(
+                slot,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    adView.adSize?.getHeightInPixels(this@MainActivity) ?: dp(50)
+                )
+            )
+        }
+        // Only request after attachment; never load if a later navigation
+        // or Remove Ads entitlement has invalidated this banner.
+        adView.post {
+            if (activeBanner === adView &&
+                adView.isAttachedToWindow &&
+                !billingManager.isRemoveAdsOwned
+            ) {
+                adMobManager.loadBanner(adView)
+            }
+        }
+        return outer
+    }
+
+    private fun clearAnchoredBanner() {
+        activeBanner?.destroy()
+        activeBanner = null
+        activeBannerSlot?.let { slot ->
+            (slot.parent as? ViewGroup)?.removeView(slot)
+        }
+        activeBannerSlot = null
     }
 
     private fun withCarnivalBackground(content: View): FrameLayout {
@@ -481,11 +606,31 @@ class MainActivity : Activity() {
             }
         }
 
+        // Independent, approved Remove Ads balloon, mirroring the Leaderboards
+        // balloon without changing the existing carnival menu illustration.
+        removeAdsBalloon = RemoveAdsBalloonButton(this).apply {
+            setOnClickListener { showRemoveAdsDialog() }
+        }
+        adFreeBadge = TextView(this).apply {
+            text = "AD-FREE"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(gold)
+            setBackgroundColor(Color.argb(220, 30, 15, 12))
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }
+
         root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
         root.addView(beaningTheClownsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(statsSettingsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(leaderboardBalloon, FrameLayout.LayoutParams(1, 1))
-        setContentView(root)
+        root.addView(removeAdsBalloon, FrameLayout.LayoutParams(1, 1))
+        root.addView(adFreeBadge, FrameLayout.LayoutParams(1, 1))
+        setContentView(withAnchoredBanner(root))
+        refreshBillingUi()
 
         root.post {
             val rootW = root.width.toFloat()
@@ -529,6 +674,13 @@ class MainActivity : Activity() {
             // the unused upper-left of the approved Game Select artwork and
             // does not alter the three painted guidepost hit regions.
             placeSign(leaderboardBalloon, 0.035f, 0.055f, 0.300f, 0.235f)
+            // Opposite corner, with the same size and independently animated.
+            removeAdsBalloon?.let {
+                placeSign(it, 0.700f, 0.055f, 0.965f, 0.235f)
+            }
+            adFreeBadge?.let {
+                placeSign(it, 0.728f, 0.210f, 0.941f, 0.238f)
+            }
         }
     }
 
@@ -591,38 +743,7 @@ class MainActivity : Activity() {
         r.addView(space(18))
         r.addView(subtitle("GOOGLE PLAY GAMES", 18f))
         r.addView(space(4))
-        r.addView(leaderboardNavButton("VIEW ACHIEVEMENTS") { showPlayGamesAchievements() })
-
-        r.addView(space(18))
-        r.addView(subtitle("REMOVE ADS", 18f))
-        r.addView(space(4))
-
-        removeAdsStatusText = TextView(this).apply {
-            textSize = 14f
-            setTextColor(cream)
-            gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(8))
-        }
-        r.addView(
-            removeAdsStatusText,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        removeAdsPurchaseButton = leaderboardNavButton("REMOVE ADS") {
-            billingManager.launchRemoveAdsPurchase()
-        }
-        r.addView(removeAdsPurchaseButton)
-
-        restorePurchaseButton = leaderboardNavButton("RESTORE PURCHASE") {
-            billingManager.restoreRemoveAdsPurchase()
-        }.apply {
-            (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6)
-        }
-        r.addView(restorePurchaseButton)
-        refreshBillingUi()
+        r.addView(achievementsMarqueeButton { showPlayGamesAchievements() })
 
         r.addView(space(18))
         r.addView(subtitle("SHARED SETTINGS", 18f))
@@ -696,47 +817,64 @@ class MainActivity : Activity() {
                 )
             )
         }
-        setContentView(withCarnivalBackground(scroll))
+        setContentView(withAnchoredBanner(withCarnivalBackground(scroll)))
     }
 
     private fun refreshBillingUi() {
         if (!::billingManager.isInitialized) return
 
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            val owned = billingManager.isRemoveAdsOwned
+            if (owned) clearAnchoredBanner()
+            removeAdsBalloon?.contentDescription =
+                if (owned) "Ad-Free purchased" else "Remove Ads"
+            adFreeBadge?.visibility = if (owned) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showRemoveAdsDialog() {
+        if (isDevelopmentBuild) {
+            AlertDialog.Builder(this)
+                .setTitle("REMOVE ADS — DEV BUILD")
+                .setMessage("The development APK is for artwork and gameplay testing. Test real Remove Ads purchases in the Google Play Internal Testing version.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        if (!::billingManager.isInitialized) return
+
         val owned = billingManager.isRemoveAdsOwned
         val pending = billingManager.isRemoveAdsPending
         val price = billingManager.removeAdsPrice
-
-        removeAdsStatusText?.text = when {
-            owned ->
-                "ADS REMOVED — THANK YOU! Rewarded continues are now ad-free."
-            pending ->
-                "PURCHASE PENDING — Google Play will unlock ad-free play after payment completes."
-            !billingManager.billingReady ->
-                "CONNECTING TO GOOGLE PLAY..."
-            billingManager.productQueryComplete && billingManager.removeAdsProductDetails == null ->
-                "REMOVE ADS IS NOT AVAILABLE FROM GOOGLE PLAY ON THIS INSTALLATION."
-            price != null ->
-                "ONE-TIME PURCHASE • $price • Restores automatically on your Google Play account."
-            else ->
-                "CHECKING PRICE WITH GOOGLE PLAY..."
+        val message = when {
+            owned -> "Ads are removed. Your one-time purchase also includes ad-free continues."
+            pending -> "Purchase pending. Google Play will activate ad-free play after payment completes."
+            !billingManager.billingReady -> "Connecting to Google Play. Please try again shortly."
+            billingManager.productQueryComplete &&
+                billingManager.removeAdsProductDetails == null ->
+                "Remove Ads is not available from Google Play on this installation."
+            price != null -> "One-time purchase: $price\nNo subscription. Your purchase can be restored on this Google Play account."
+            else -> "Checking Remove Ads price with Google Play. Please try again shortly."
         }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (owned) "AD-FREE" else "REMOVE ADS")
+            .setMessage(message)
+            .setNegativeButton("CLOSE", null)
 
-        removeAdsPurchaseButton?.apply {
-            text = when {
-                owned -> "ADS REMOVED"
-                pending -> "PURCHASE PENDING"
-                price != null -> "REMOVE ADS — $price"
-                else -> "REMOVE ADS"
+        if (!owned) {
+            dialog.setNeutralButton("RESTORE PURCHASE") { _, _ ->
+                billingManager.restoreRemoveAdsPurchase()
             }
-            isEnabled = billingManager.canPurchaseRemoveAds
-            alpha = if (isEnabled) 1f else 0.65f
         }
-
-        restorePurchaseButton?.apply {
-            visibility = if (owned) View.GONE else View.VISIBLE
-            isEnabled = billingManager.billingReady
-            alpha = if (isEnabled) 1f else 0.65f
+        if (!owned && !pending && billingManager.canPurchaseRemoveAds) {
+            dialog.setPositiveButton("BUY REMOVE ADS") { _, _ ->
+                billingManager.launchRemoveAdsPurchase()
+            }
+        } else {
+            dialog.setPositiveButton("OK", null)
         }
+        dialog.show()
     }
 
     private fun showOnlineLeaderboards(
@@ -828,7 +966,15 @@ class MainActivity : Activity() {
                 )
             )
         }
-        setContentView(withCarnivalBackground(scroll))
+        setContentView(withAnchoredBanner(withCarnivalBackground(scroll)))
+
+        if (isDevelopmentBuild) {
+            status.text = "DEV PREVIEW — ONLINE SCORES DISABLED"
+            results.addView(
+                leaderboardMessage("Marquee layout preview only. Online rankings and sign-in are tested in the Google Play build.")
+            )
+            return
+        }
 
         fun loadWhenAuthenticated() {
             status.text = "LOADING..."
@@ -1018,24 +1164,7 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): GameModeMarqueeButtonView {
-        val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
-        val signHeight = (signWidth * 0.24f).toInt()
-        return GameModeMarqueeButtonView(
-            this,
-            label,
-            selected = selected,
-            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
-        ).apply {
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$label leaderboard"
-            setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-        }
-    }
+    ): ImageButton = approvedGameModeMarquee(label, selected, "leaderboard", onClick)
 
     private fun leaderboardRefreshSign(
         onClick: () -> Unit
@@ -1082,21 +1211,55 @@ class MainActivity : Activity() {
         label: String,
         selected: Boolean,
         onClick: () -> Unit
-    ): GameModeMarqueeButtonView {
+    ): ImageButton = approvedGameModeMarquee(label, selected, "stats", onClick)
+
+    private fun approvedGameModeMarquee(
+        label: String,
+        selected: Boolean,
+        screen: String,
+        onClick: () -> Unit
+    ): ImageButton {
+        // Preserve the original Stats/Leaderboard control dimensions and positions.
         val signWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
         val signHeight = (signWidth * 0.24f).toInt()
-        return GameModeMarqueeButtonView(
-            this,
-            label,
-            selected = selected,
-            animationsEnabled = prefs.getBoolean("carnival_lights_enabled", true)
-        ).apply {
+        val y = if (label == "BEANING THE CLOWNS") 86 else 0
+        val bitmap = Bitmap.createBitmap(approvedStatsSignAtlas, 0, y, 360, 86)
+        return ImageButton(this).apply {
+            setImageBitmap(bitmap)
+            scaleType = ImageView.ScaleType.FIT_XY
+            adjustViewBounds = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            alpha = if (selected) 1f else 0.76f
             isClickable = true
             isFocusable = true
-            contentDescription = "$label stats"
+            contentDescription = "$label $screen"
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(signWidth, signHeight).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+    }
+
+    private fun achievementsMarqueeButton(onClick: () -> Unit): ImageButton {
+        // Same 54dp height and 18dp horizontal margins as the original button.
+        val bitmap = Bitmap.createBitmap(approvedStatsSignAtlas, 0, 172, 360, 58)
+        return ImageButton(this).apply {
+            setImageBitmap(bitmap)
+            scaleType = ImageView.ScaleType.FIT_XY
+            adjustViewBounds = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(0, 0, 0, 0)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "View Achievements"
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(54)
+            ).apply {
+                leftMargin = dp(18)
+                rightMargin = dp(18)
             }
         }
     }
@@ -1122,6 +1285,7 @@ class MainActivity : Activity() {
     }
 
     private fun showReady() {
+        clearAnchoredBanner()
         activeMode = ActiveGameMode.NONE
         inGame = false
         chooseClown()
@@ -1217,6 +1381,7 @@ class MainActivity : Activity() {
     }
 
     private fun showGame() {
+        clearAnchoredBanner()
         val r = root()
         r.addView(marqueeTitle(170, 113))
 
@@ -1579,10 +1744,11 @@ class MainActivity : Activity() {
             startNewGame()
         })
         r.addView(button("MAIN MENU") { showMenu() })
-        setContentView(withCarnivalBackground(r))
+        setContentView(withAnchoredBanner(withCarnivalBackground(r)))
     }
 
     private fun showBeaningReady() {
+        clearAnchoredBanner()
         sessionToken++
         handler.removeCallbacksAndMessages(null)
         audio.stopEventSequence()
@@ -1677,6 +1843,7 @@ class MainActivity : Activity() {
     }
 
     private fun startBeaningGame() {
+        clearAnchoredBanner()
         sessionToken++
         handler.removeCallbacksAndMessages(null)
         audio.stopEventSequence()
@@ -1935,6 +2102,11 @@ class MainActivity : Activity() {
                 rightMargin = dp(28)
             }
         )
+
+        // Reparent the completed Beaning scene into a non-overlapping
+        // banner layout only after gameplay has stopped.
+        (beaningRoot.parent as? ViewGroup)?.removeView(beaningRoot)
+        setContentView(withAnchoredBanner(beaningRoot))
     }
 
     private fun beaningResultLine(label: String, value: String): TextView = TextView(this).apply {
@@ -1991,6 +2163,10 @@ class MainActivity : Activity() {
     }
 
     private fun showPlayGamesAchievements() {
+        if (isDevelopmentBuild) {
+            Toast.makeText(this, "Online achievements are only available in the Google Play test build.", Toast.LENGTH_LONG).show()
+            return
+        }
         fun openAchievements() {
             achievementTracker.sync()
             achievementGateway.showAchievements { opened ->
@@ -2020,6 +2196,7 @@ class MainActivity : Activity() {
                     "Sign in to Google Play Games to view achievements",
                     Toast.LENGTH_LONG
                 ).show()
+                showPlayGamesSignInDiagnostic()
             }
         }
     }
@@ -2054,27 +2231,33 @@ class MainActivity : Activity() {
                                 flushPendingOnlineScores()
                                 achievementTracker.sync()
                             } else {
-                                Toast.makeText(
-                                    this,
-                                    "Google Play Games sign-in not completed",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                showPlayGamesSignInDiagnostic()
                             }
                         }
                     }
                 }
 
                 LeaderboardAuthState.ERROR -> {
-                    Toast.makeText(
-                        this,
-                        "Google Play Games is unavailable",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showPlayGamesSignInDiagnostic()
                 }
 
                 LeaderboardAuthState.UNCONFIGURED,
                 LeaderboardAuthState.CHECKING -> Unit
             }
+        }
+    }
+
+    /** Diagnostic-only dialog, shown on sign-in failure; the M4 UI is unchanged. */
+    private fun showPlayGamesSignInDiagnostic() {
+        val detail = leaderboardGateway.lastAuthDiagnostic
+            ?: "Google Play Games returned no additional error information."
+        runOnUiThread {
+            if (isFinishing || isDestroyed) return@runOnUiThread
+            AlertDialog.Builder(this)
+                .setTitle("GOOGLE PLAY GAMES SIGN-IN FAILED")
+                .setMessage("$detail\n\nPlease take a screenshot of this error for troubleshooting.")
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
 
