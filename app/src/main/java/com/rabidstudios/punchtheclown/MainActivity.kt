@@ -271,7 +271,7 @@ class MainActivity : Activity() {
                 slot,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    adView.adSize.getHeightInPixels(this@MainActivity)
+                    adView.adSize?.getHeightInPixels(this@MainActivity) ?: dp(50)
                 )
             )
         }
