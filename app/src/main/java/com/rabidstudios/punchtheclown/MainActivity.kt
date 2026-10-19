@@ -290,6 +290,18 @@ class MainActivity : Activity() {
         val outer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(dark)
+            // When the player swipes up, Android may briefly show its
+            // navigation controls on top of the game. Lift the banner above
+            // that temporary system inset, then reclaim the space once hidden.
+            setOnApplyWindowInsetsListener { view, insets ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+                    if (view.paddingBottom != bottom) {
+                        view.setPadding(0, 0, 0, bottom)
+                    }
+                }
+                insets
+            }
             addView(
                 content,
                 LinearLayout.LayoutParams(
