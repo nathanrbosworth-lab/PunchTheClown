@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +15,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Base64
 import android.view.Gravity
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -115,6 +118,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = dark
         window.navigationBarColor = dark
+        hideAndroidNavigationBar()
         prefs = getSharedPreferences("punch_the_clown", MODE_PRIVATE)
         localStats = LocalStatsRepository(prefs)
         leaderboardGateway = PlayGamesLeaderboardGateway(this)
@@ -168,6 +172,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        hideAndroidNavigationBar()
         activeBanner?.resume()
         if (::billingManager.isInitialized && !isDevelopmentBuild) {
             billingManager.refresh()
@@ -196,6 +201,32 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    /**
+     * Keep Android's top status bar visible while automatically hiding the
+     * bottom navigation controls. A swipe may reveal them temporarily.
+     * Reapply when focus returns from an ad, purchase flow or system dialog.
+     */
+    private fun hideAndroidNavigationBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.decorView.windowInsetsController?.apply {
+                systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsets.Type.navigationBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideAndroidNavigationBar()
     }
 
     @Deprecated("Deprecated in Java")
