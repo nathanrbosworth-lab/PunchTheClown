@@ -106,7 +106,7 @@ class AdMobManager(
 
         return AdView(activity).apply {
             setAdUnitId(adUnitId)
-            setAdSize(AdSize.getLargeAnchoredAdaptiveBannerAdSize(activity, widthDp))
+            setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, widthDp))
         }
     }
 
