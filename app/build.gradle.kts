@@ -34,10 +34,12 @@ android {
             manifestPlaceholders["appLabel"] = "Punch the Clown DEV"
             signingConfig = signingConfigs.getByName("ciDebug")
             resValue("bool", "show_dev_version_sign", "true")
+            resValue("bool", "use_test_ad_units", "true")
         }
         release {
             isMinifyEnabled = false
             resValue("bool", "show_dev_version_sign", "false")
+            resValue("bool", "use_test_ad_units", "false")
         }
         create("playInternal") {
             initWith(getByName("release"))
@@ -46,6 +48,7 @@ android {
             signingConfig = signingConfigs.getByName("ciDebug")
             matchingFallbacks += listOf("release")
             resValue("bool", "show_dev_version_sign", "true")
+            resValue("bool", "use_test_ad_units", "true")
         }
     }
 

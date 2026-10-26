@@ -1,7 +1,6 @@
 package com.rabidstudios.punchtheclown
 
 import android.app.Activity
-import android.content.pm.ApplicationInfo
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -90,14 +89,14 @@ class AdMobManager(
 
     /**
      * Anchored adaptive banners are permitted only on non-gameplay screens.
-     * The production banner ad unit must be configured in admob_ids.xml;
-     * never use Google's sample ad unit in a Play build.
+     * Production uses the configured live banner unit. DEV and Google Play
+     * Internal Testing use Google's sample banner unit so test traffic never
+     * touches production inventory.
      */
     fun createBanner(widthDp: Int): AdView? {
         if (adsRemoved() || widthDp < 32) return null
-        val isDebuggable =
-            activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-        val adUnitId = if (isDebuggable) {
+        val useTestAdUnits = activity.resources.getBoolean(R.bool.use_test_ad_units)
+        val adUnitId = if (useTestAdUnits) {
             activity.getString(R.string.admob_test_banner)
         } else {
             activity.getString(R.string.admob_banner)
@@ -158,9 +157,8 @@ class AdMobManager(
     }
 
     private fun rewardedAdUnitId(placement: RewardPlacement): String {
-        val isDebuggable =
-            activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-        if (isDebuggable) {
+        val useTestAdUnits = activity.resources.getBoolean(R.bool.use_test_ad_units)
+        if (useTestAdUnits) {
             return activity.getString(R.string.admob_test_rewarded)
         }
 
