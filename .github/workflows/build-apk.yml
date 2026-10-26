@@ -98,23 +98,40 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Install audio tooling
+      - name: Restore validated Punch board sounds
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if command -v ffmpeg >/dev/null 2>&1; then
-            ffmpeg -version | head -n 1
-          else
-            sudo apt-get install -y -qq ffmpeg
-          fi
-
-      - name: Materialize one-octave-lower Punch board sounds
-        run: bash scripts/lower-punch-grid-sounds.sh
+          gh api repos/${{ github.repository }}/actions/artifacts/11682718544/zip > /tmp/m5_4_audio_artifact.zip
+          unzip -p /tmp/m5_4_audio_artifact.zip app-debug.apk > /tmp/m5_4_baseline.apk
+          for name in \
+            grid_01_clown_car.ogg \
+            grid_02_freesound_squeak.ogg \
+            grid_03_squeak_3.ogg \
+            grid_04_squeak_2.ogg \
+            grid_05_squeak_1.ogg \
+            grid_06_baby_1.ogg \
+            grid_07_baby_2.ogg \
+            grid_08_tiny_1.ogg \
+            grid_09_baby_4.ogg
+          do
+            unzip -p /tmp/m5_4_baseline.apk "res/raw/$name" > "app/src/main/res/raw/$name"
+          done
+          echo "ce6d4ff17fcd9ad9a96f01e29aa78be9a5b4a48aed036339fc5d06c32354db14  app/src/main/res/raw/grid_01_clown_car.ogg" | sha256sum -c -
+          echo "5700e60c3104ceeb1d061ffd6292a2fc7bf87699011a8182af8b72b5fc59c972  app/src/main/res/raw/grid_02_freesound_squeak.ogg" | sha256sum -c -
+          echo "d19f6c8dd974839425c4b9eaaa9d7f9f14d0bd8ead0811042d9323c2b7188158  app/src/main/res/raw/grid_03_squeak_3.ogg" | sha256sum -c -
+          echo "6352bf80ca56db720c370276261b991daa0f67132bd6f405b1a41ded0862b50f  app/src/main/res/raw/grid_04_squeak_2.ogg" | sha256sum -c -
+          echo "686dffca1eca8bffaddf44e67123a4cfebcabd48981c790ff0690d010b1e1da2  app/src/main/res/raw/grid_05_squeak_1.ogg" | sha256sum -c -
+          echo "2ad08f3bfc0da08f44c2d756f92d5fb165e8b791418657599224fb2d1c2da91d  app/src/main/res/raw/grid_06_baby_1.ogg" | sha256sum -c -
+          echo "bebfdfc2def78206d35b161f631d6357f19a770294a24d2080d161cba30b831f  app/src/main/res/raw/grid_07_baby_2.ogg" | sha256sum -c -
+          echo "a0da464f7e12a6bbd503863b9436df5a8d8f4d5d26a1d1522091a7500cc05d09  app/src/main/res/raw/grid_08_tiny_1.ogg" | sha256sum -c -
+          echo "df67b932f93bf4dcb58288be18aabafbf5c99f57495fa0068dc8edca05d88cd1  app/src/main/res/raw/grid_09_baby_4.ogg" | sha256sum -c -
 
       - name: Verify illustrated Punch canvas dimensions
         run: |
           for n in $(seq -w 1 10); do
             file="app/src/main/res/drawable-nodpi/clown_illustrated_${n}.webp"
-            dimensions="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$file")"
-            test "$dimensions" = "900x900"
+            file "$file" | grep -q "900x900"
           done
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
