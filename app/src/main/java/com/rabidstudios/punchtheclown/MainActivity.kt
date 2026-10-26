@@ -481,10 +481,32 @@ class MainActivity : Activity() {
             }
         }
 
+        val devVersionSign = if (BuildConfig.DEBUG) {
+            TextView(this).apply {
+                text = "DEV • ${BuildConfig.VERSION_NAME} • VC ${BuildConfig.VERSION_CODE}"
+                textSize = 12f
+                setTextColor(cream)
+                gravity = Gravity.CENTER
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(dp(8), dp(4), dp(8), dp(4))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(72, 41, 25))
+                    setStroke(dp(2), gold)
+                    cornerRadius = dp(8).toFloat()
+                }
+                contentDescription =
+                    "Development build ${BuildConfig.VERSION_NAME}, version code ${BuildConfig.VERSION_CODE}"
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            }
+        } else {
+            null
+        }
+
         root.addView(punchTheClownSign, FrameLayout.LayoutParams(1, 1))
         root.addView(beaningTheClownsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(statsSettingsSign, FrameLayout.LayoutParams(1, 1))
         root.addView(leaderboardBalloon, FrameLayout.LayoutParams(1, 1))
+        devVersionSign?.let { root.addView(it, FrameLayout.LayoutParams(1, 1)) }
         setContentView(root)
 
         root.post {
@@ -529,6 +551,13 @@ class MainActivity : Activity() {
             // the unused upper-left of the approved Game Select artwork and
             // does not alter the three painted guidepost hit regions.
             placeSign(leaderboardBalloon, 0.035f, 0.055f, 0.300f, 0.235f)
+
+            // Debug/dev builds only: small readable build marker directly
+            // beneath the Game Select marquee. Play/internal builds do not
+            // render this sign because BuildConfig.DEBUG is false.
+            devVersionSign?.let {
+                placeSign(it, 0.255f, 0.285f, 0.745f, 0.325f)
+            }
         }
     }
 
