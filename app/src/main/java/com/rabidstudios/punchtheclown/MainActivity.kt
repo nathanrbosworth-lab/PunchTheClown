@@ -481,15 +481,14 @@ class MainActivity : Activity() {
             }
         }
 
-        val isDebugBuild =
-            applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val showDevVersionSign = resources.getBoolean(R.bool.show_dev_version_sign)
         @Suppress("DEPRECATION")
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         val devVersionName = packageInfo.versionName ?: "unknown"
         @Suppress("DEPRECATION")
         val devVersionCode = packageInfo.versionCode
 
-        val devVersionSign = if (isDebugBuild) {
+        val devVersionSign = if (showDevVersionSign) {
             TextView(this).apply {
                 text = "DEV • $devVersionName • VC $devVersionCode"
                 textSize = 12f
