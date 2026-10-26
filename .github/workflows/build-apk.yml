@@ -143,15 +143,20 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Build Play internal AAB
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_play_aab }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_play_aab) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
         run: gradle :app:bundlePlayInternal --stacktrace
 
       - name: Verify Play internal AAB
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_play_aab }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_play_aab) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
         run: |
           AAB="app/build/outputs/bundle/playInternal/app-playInternal.aab"
           test -f "$AAB"
           jarsigner -verify -verbose -certs "$AAB"
+          unzip -l "$AAB" | grep -q "remove_ads_balloon"
+          unzip -l "$AAB" | grep -q "stats_marquee_atlas"
+          grep -q 'versionCode = 89' app/build.gradle.kts
+          grep -q 'versionName = "0.5.10"' app/build.gradle.kts
+          grep -q 'versionNameSuffix = "-dev"' app/build.gradle.kts
           sha256sum "$AAB"
 
       - name: Verify DEV APK
@@ -246,10 +251,10 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Play internal AAB
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_play_aab }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_play_aab) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-0.5.10-play-internal-aab
+          name: PunchTheClown-0.5.10-dev-vc89-play-internal-aab
           path: app/build/outputs/bundle/playInternal/app-playInternal.aab
           if-no-files-found: error
 

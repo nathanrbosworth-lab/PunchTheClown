@@ -33,15 +33,19 @@ android {
             versionNameSuffix = "-dev"
             manifestPlaceholders["appLabel"] = "Punch the Clown DEV"
             signingConfig = signingConfigs.getByName("ciDebug")
+            resValue("bool", "show_dev_version_sign", "true")
         }
         release {
             isMinifyEnabled = false
+            resValue("bool", "show_dev_version_sign", "false")
         }
         create("playInternal") {
             initWith(getByName("release"))
             isDebuggable = false
+            versionNameSuffix = "-dev"
             signingConfig = signingConfigs.getByName("ciDebug")
             matchingFallbacks += listOf("release")
+            resValue("bool", "show_dev_version_sign", "true")
         }
     }
 
