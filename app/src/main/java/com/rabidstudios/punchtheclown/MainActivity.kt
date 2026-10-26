@@ -621,7 +621,7 @@ class MainActivity : Activity() {
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setTextColor(cream)
                 setPadding(dp(8), dp(4), dp(8), dp(4))
-                background = GradientDrawable().apply {
+                this.background = GradientDrawable().apply {
                     setColor(Color.rgb(72, 41, 25))
                     setStroke(dp(2), gold)
                     cornerRadius = dp(8).toFloat()
