@@ -12,7 +12,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 89
-        versionName = "0.5.10-dev"
+        versionName = "0.5.10"
+        manifestPlaceholders["appLabel"] = "Punch the Clown"
     }
 
     signingConfigs {
@@ -27,19 +28,20 @@ android {
 
     buildTypes {
         getByName("debug") {
+            // Independent, safely sideloadable development installation.
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "Punch the Clown DEV"
             signingConfig = signingConfigs.getByName("ciDebug")
-            resValue("bool", "show_dev_version_sign", "true")
         }
         release {
             isMinifyEnabled = false
-            resValue("bool", "show_dev_version_sign", "false")
         }
         create("playInternal") {
             initWith(getByName("release"))
             isDebuggable = false
             signingConfig = signingConfigs.getByName("ciDebug")
             matchingFallbacks += listOf("release")
-            resValue("bool", "show_dev_version_sign", "true")
         }
     }
 

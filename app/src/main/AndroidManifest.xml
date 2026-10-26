@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:icon="@drawable/punch_clown_icon"
         android:roundIcon="@drawable/punch_clown_icon"
-        android:label="Punch the Clown"
+        android:label="${appLabel}"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <meta-data
