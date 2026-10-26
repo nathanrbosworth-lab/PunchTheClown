@@ -481,21 +481,29 @@ class MainActivity : Activity() {
             }
         }
 
-        val devVersionSign = if (BuildConfig.DEBUG) {
+        val isDebugBuild =
+            applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        @Suppress("DEPRECATION")
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        val devVersionName = packageInfo.versionName ?: "unknown"
+        @Suppress("DEPRECATION")
+        val devVersionCode = packageInfo.versionCode
+
+        val devVersionSign = if (isDebugBuild) {
             TextView(this).apply {
-                text = "DEV • ${BuildConfig.VERSION_NAME} • VC ${BuildConfig.VERSION_CODE}"
+                text = "DEV • $devVersionName • VC $devVersionCode"
                 textSize = 12f
                 setTextColor(cream)
                 gravity = Gravity.CENTER
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setPadding(dp(8), dp(4), dp(8), dp(4))
-                background = GradientDrawable().apply {
+                this.background = GradientDrawable().apply {
                     setColor(Color.rgb(72, 41, 25))
                     setStroke(dp(2), gold)
                     cornerRadius = dp(8).toFloat()
                 }
                 contentDescription =
-                    "Development build ${BuildConfig.VERSION_NAME}, version code ${BuildConfig.VERSION_CODE}"
+                    "Development build $devVersionName, version code $devVersionCode"
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             }
         } else {
