@@ -565,8 +565,10 @@ class MainActivity : Activity() {
 
         val background = ImageView(this).apply {
             setImageResource(R.drawable.game_select_screen)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
+            // Fill the entire Game Select content area. The banner lives in
+            // its own reserved strip below this view, so it never covers art.
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            adjustViewBounds = false
             contentDescription = "Punch the Clown carnival game selection"
         }
         root.addView(
@@ -671,16 +673,20 @@ class MainActivity : Activity() {
             val artLeft: Float
             val artTop: Float
 
+            // Match ImageView.CENTER_CROP exactly so transparent hit targets,
+            // balloons and the DEV label stay registered to the painted art.
+            // CENTER_CROP intentionally permits negative offsets where the
+            // source artwork is cropped beyond the visible content bounds.
             if (rootRatio > artRatio) {
-                artH = rootH
-                artW = artH * artRatio
-                artLeft = (rootW - artW) / 2f
-                artTop = 0f
-            } else {
                 artW = rootW
                 artH = artW / artRatio
                 artLeft = 0f
                 artTop = (rootH - artH) / 2f
+            } else {
+                artH = rootH
+                artW = artH * artRatio
+                artLeft = (rootW - artW) / 2f
+                artTop = 0f
             }
 
             fun placeSign(view: View, left: Float, top: Float, right: Float, bottom: Float) {

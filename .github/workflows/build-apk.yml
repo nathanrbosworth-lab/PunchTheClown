@@ -154,8 +154,8 @@ jobs:
           jarsigner -verify -verbose -certs "$AAB"
           unzip -l "$AAB" | grep -q "remove_ads_balloon"
           unzip -l "$AAB" | grep -q "stats_marquee_atlas"
-          grep -q 'versionCode = 89' app/build.gradle.kts
-          grep -q 'versionName = "0.5.10"' app/build.gradle.kts
+          grep -q 'versionCode = 90' app/build.gradle.kts
+          grep -q 'versionName = "0.5.11"' app/build.gradle.kts
           grep -q 'versionNameSuffix = "-dev"' app/build.gradle.kts
           sha256sum "$AAB"
 
@@ -234,7 +234,7 @@ jobs:
           base64 -d app/src/main/res/raw/remove_ads_balloon > /tmp/remove_ads_balloon.webp
           file /tmp/remove_ads_balloon.webp | grep -q "Web/P image"
           echo "114031a6d3a5b788074af29fd0a5a7f382b1bc7cc27d888978864f329bd7bd31  /tmp/remove_ads_balloon.webp" | sha256sum -c -
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='89'.*versionName='0.5.10-dev'"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "versionCode='90'.*versionName='0.5.11-dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "package: name='com.rabidstudios.punchtheclown.dev'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "application-label:'Punch the Clown DEV'"
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | grep -q "targetSdkVersion:'36'"
@@ -246,7 +246,7 @@ jobs:
       - name: Upload DEV APK
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-0.5.10-DEV-full-M5.9-features
+          name: PunchTheClown-0.5.11-DEV-fullscreen-menu
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
@@ -254,7 +254,7 @@ jobs:
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_play_aab) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
         uses: actions/upload-artifact@v4
         with:
-          name: PunchTheClown-0.5.10-dev-vc89-play-internal-aab
+          name: PunchTheClown-0.5.11-dev-vc90-play-internal-aab
           path: app/build/outputs/bundle/playInternal/app-playInternal.aab
           if-no-files-found: error
 
