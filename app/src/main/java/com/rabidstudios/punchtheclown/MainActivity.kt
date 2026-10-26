@@ -29,7 +29,9 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -275,6 +277,7 @@ class MainActivity : Activity() {
 
         val slot = FrameLayout(this).apply {
             setBackgroundColor(dark)
+            visibility = View.GONE
             addView(
                 adView,
                 FrameLayout.LayoutParams(
@@ -314,10 +317,36 @@ class MainActivity : Activity() {
                 slot,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    adView.adSize?.getHeightInPixels(this@MainActivity) ?: dp(50)
+                    0
                 )
             )
         }
+
+        fun setBannerVisible(visible: Boolean) {
+            if (activeBanner !== adView || activeBannerSlot !== slot) return
+            val targetHeight = if (visible) {
+                adView.adSize?.getHeightInPixels(this@MainActivity) ?: dp(50)
+            } else {
+                0
+            }
+            slot.visibility = if (visible) View.VISIBLE else View.GONE
+            val params = slot.layoutParams as? LinearLayout.LayoutParams
+            if (params != null && params.height != targetHeight) {
+                params.height = targetHeight
+                slot.layoutParams = params
+            }
+        }
+
+        adView.adListener = object : AdListener() {
+            override fun onAdLoaded() {
+                setBannerVisible(true)
+            }
+
+            override fun onAdFailedToLoad(error: LoadAdError) {
+                setBannerVisible(false)
+            }
+        }
+
         // Only request after attachment; never load if a later navigation
         // or Remove Ads entitlement has invalidated this banner.
         adView.post {
@@ -335,6 +364,11 @@ class MainActivity : Activity() {
         activeBanner?.destroy()
         activeBanner = null
         activeBannerSlot?.let { slot ->
+            slot.visibility = View.GONE
+            (slot.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
+                params.height = 0
+                slot.layoutParams = params
+            }
             (slot.parent as? ViewGroup)?.removeView(slot)
         }
         activeBannerSlot = null
